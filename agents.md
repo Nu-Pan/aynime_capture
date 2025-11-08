@@ -52,9 +52,10 @@
     - `time_in_sec` は最新フレームからの相対的な秒数で float 値
     - たとえば、 0.1 を指定したら、 0.1 秒前のフレームのインデックス値が返ってくる
     - フレームインデックスは最新が 0 で、大きい数字＝過去
-- 関数 `Snapshot.GetFrame(frame_index)`
-    - スナップショット上の `frame_index` 番目のフレームを PIL 画像として取得する
-    - `GetFrame` 内で VRAM --> メインメモリ転送が行われるため、多少のブロッキングが発生する
+- 関数 `Snapshot.GetFrameBuffer(frame_index)`
+    - スナップショット上の `frame_index` 番目のフレームのメモリイメージを返す
+    - アプリ側でメモリーバッファーから PIL へ変換されることを前提とする
+    - `GetFrameBuffer` 内で VRAM --> メインメモリ転送が行われるため、多少のブロッキングが発生する
 
 ## サンプルコード（スチルキャプチャ）
 ```python
@@ -70,8 +71,8 @@ sleep(4)
 
 # スナップショット経由で取得
 with Snapshot() as s:
-    still_index = s.GetFrameIndexBytTime(0.1)
-    still_image = s.GetFrame(still_index)
+    still_index = s.GetFrameIndexByTime(0.1)
+    still_image = s.GetFrameBuffer(still_index)
 
 # still_image を使って何かする
 ...
@@ -92,9 +93,9 @@ sleep(4)
 
 # スナップショット経由で取得
 with Snapshot() as s:
-    oldest_index = s.GetFrameIndexBytTime(3.0)
+    oldest_index = s.GetFrameIndexByTime(3.0)
     anim_images = [
-        s.GetFrame(i)
+        s.GetFrameBuffer(i)
         for i in range(oldest_index + 1)
     ]
 
