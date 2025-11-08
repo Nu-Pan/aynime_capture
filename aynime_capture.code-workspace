@@ -7,6 +7,9 @@
 	"settings": {
 		"files.exclude": {
 			"**/__pycache__": true,
+			"**/*.pyd": true,
+			"**/*.egg-info": true,
+			"**/*.pytest_cache": true,
 			"**/*.pdb": true,
 			"**/.git": true,
 			"**/.svn": true,
@@ -29,8 +32,7 @@
 		"python.terminal.activateEnvironment": true,
 		"python.analysis.extraPaths": [
 			"src"
-		],
-		"C_Cpp.default.cppStandard": "c++20"
+		]
 	},
 	"extensions": {
 		"recommendations": [
