@@ -67,7 +67,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <TargetName>aynime_capture$(PythonDebugSuffix)</TargetName>
+    <TargetName>aynime_capture</TargetName>
     <TargetExt>.pyd</TargetExt>
     <LocalDebuggerCommand>$(PythonDExe)</LocalDebuggerCommand>
     <LocalDebuggerCommandArguments>-i -c "print('&gt;&gt;&gt; import aynime_capture'); import aynime_capture"</LocalDebuggerCommandArguments>
