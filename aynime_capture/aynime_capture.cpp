@@ -1,12 +1,21 @@
-#include <pybind11/pybind11.h>
-#include <cstdint>
-#if defined(_WIN32)
-#   define NOMINMAX
-#   include <Windows.h>
-#endif
+//-----------------------------------------------------------------------------
+// Include
+//-----------------------------------------------------------------------------
+
+#include "stdafx.h"
+
+#include "py_utils.h"
+
+//-----------------------------------------------------------------------------
+// namespace
+//-----------------------------------------------------------------------------
 
 namespace py = pybind11;
+using namespace std;
 
+//-----------------------------------------------------------------------------
+// Aynime Definitions(Forward)
+//-----------------------------------------------------------------------------
 namespace ayn
 {
     //-------------------------------------------------------------------------
@@ -14,25 +23,75 @@ namespace ayn
     //-------------------------------------------------------------------------
 
     // ウィンドウハンドルの別名
-    using HWND_INT = std::uintptr_t;
+    using HWND_INT = uintptr_t;
 
-    //-------------------------------------------------------------------------
-    // Functions
-    //-------------------------------------------------------------------------
-
-    //-------------------------------------------------------------------------
-    // 未実装例外
-    [[noreturn]] inline void not_impl(const char* what)
+    // キャプチャしたフレーム１枚を表す構造体
+    struct CaptureFrame
     {
-        PyErr_SetString(PyExc_NotImplementedError, what);
-        throw py::error_already_set();
-    }
+        double timeInSec;
+        void* pFrame;
+    };
+}
 
+//-----------------------------------------------------------------------------
+// Link-Local Definition
+//-----------------------------------------------------------------------------
+namespace
+{
+    //-------------------------------------------------------------------------
+    // Variables
+    //-------------------------------------------------------------------------
+
+    // バックグラウンドスレッド
+    // NOTE
+    //  プロセスと運命を共にする前提なので、解体処理は不要。
+    thread* s_pBackgroundThread = nullptr;
+
+    // BG スレッド系ミューテックス
+    mutex s_bgtMutex;
+
+    // キャプチャ設定
+    ayn::HWND_INT s_hwnd = 0;
+    int s_fps = 30;
+    double s_durationInSec = 3;
+
+    // バックバッファ
+    deque<ayn::CaptureFrame> s_backBuffer;
+
+    //-------------------------------------------------------------------------
+    // バックグラウンドスレッドハンドラ
+    // NOTE
+    //  この関数内でキャプチャを繰り返す
+    void _backGroundThreadHandler()
+    {
+        for (;;)
+        {
+            // TODO ここにキャプチャ処理、 s_backBuffer に詰めていく
+        }
+    }
+}
+
+//-----------------------------------------------------------------------------
+// Aynime Definitions
+//-----------------------------------------------------------------------------
+namespace
+{
     //-------------------------------------------------------------------------
     // API: StartSession
-    void StartSession(HWND_INT hwnd, int fps, double duration_in_sec)
+    void StartSession(ayn::HWND_INT hwnd, int fps, double durationInSec)
     {
-        not_impl("StartSession is not implemented yet.");
+        // キャプチャ設定更新
+        {
+            scoped_lock lock(s_bgtMutex);
+            s_hwnd = hwnd;
+            s_fps = fps;
+            s_durationInSec = durationInSec;
+        }
+        // バックグラウンドスレッド起動
+        if (s_pBackgroundThread == nullptr)
+        {
+            s_pBackgroundThread = new thread(_backGroundThreadHandler);
+        }
     }
 
     //-------------------------------------------------------------------------
@@ -54,17 +113,19 @@ namespace ayn
         // API: GetFrameIndexByTime
         std::size_t GetFrameIndexByTime(double time_in_sec) const
         {
-            not_impl("GetFrameIndexByTime is not implemented yet.");
+            ayc::throw_not_impl("GetFrameIndexByTime is not implemented yet.");
         }
 
         //---------------------------------------------------------------------
         // API: GetFrameBuffer
         py::object GetFrameBuffer(std::size_t frame_index) const
         {
-            not_impl("GetFrameBuffer is not implemented yet.");
+            ayc::throw_not_impl("GetFrameBuffer is not implemented yet.");
         }
-    };
 
+    private:
+        vector<ayn::CaptureFrame> m_frames;
+    };
 }
 
 //-------------------------------------------------------------------------
@@ -78,7 +139,7 @@ PYBIND11_MODULE(aynime_capture, m) {
     // StartSession
     m.def(
         "StartSession",
-        &ayn::StartSession,
+        &StartSession,
         py::arg("hwnd"),
         py::arg("fps"),
         py::arg("duration_in_sec"),
@@ -86,7 +147,7 @@ PYBIND11_MODULE(aynime_capture, m) {
     );
 
     // Snapshot
-    py::class_<ayn::Snapshot>(m, "Snapshot", py::module_local())
+    py::class_<Snapshot>(m, "Snapshot", py::module_local())
         // コンストラクタ
         .def(
             py::init<>(),
@@ -95,24 +156,24 @@ PYBIND11_MODULE(aynime_capture, m) {
         // with 句(enter)
         .def(
             "__enter__",
-            [](ayn::Snapshot& self) -> ayn::Snapshot* { return &self; },
+            [](Snapshot& self) -> Snapshot* { return &self; },
             py::return_value_policy::reference_internal
         )
         // with 句(exit)
         .def(
             "__exit__",
-            [](ayn::Snapshot&, py::object, py::object, py::object) { return false; }
+            [](Snapshot&, py::object, py::object, py::object) { return false; }
         )
         // GetFrameIndexByTime
         .def(
             "GetFrameIndexByTime",
-            &ayn::Snapshot::GetFrameIndexByTime, py::arg("time_in_sec"),
+            &Snapshot::GetFrameIndexByTime, py::arg("time_in_sec"),
             "Return frame index closest to the given relative time."
         )
         // GetFrameBuffer
         .def(
             "GetFrameBuffer",
-            &ayn::Snapshot::GetFrameBuffer, py::arg("frame_index"),
+            &Snapshot::GetFrameBuffer, py::arg("frame_index"),
             "Return frame buffer for the given index."
         );
 }
