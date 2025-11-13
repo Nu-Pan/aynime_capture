@@ -18,7 +18,7 @@
     <ClCompile Include="aynime_capture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="wgc_wrapper.cpp">
+    <ClCompile Include="wgc_session.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.cpp">
@@ -27,15 +27,21 @@
     <ClCompile Include="py_utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="wgc_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="wgc_wrapper.h">
+    <ClInclude Include="wgc_session.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="py_utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="wgc_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

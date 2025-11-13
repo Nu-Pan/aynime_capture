@@ -5,7 +5,8 @@
 #include "stdafx.h"
 
 #include "py_utils.h"
-#include "wgc_wrapper.h"
+#include "wgc_system.h"
+#include "wgc_session.h"
 
 //-----------------------------------------------------------------------------
 // namespace
@@ -59,20 +60,8 @@ namespace
     // バックバッファ
     deque<ayn::CaptureFrame> s_backBuffer;
 
-    //-------------------------------------------------------------------------
-    // バックグラウンドスレッドハンドラ
-    // NOTE
-    //  この関数内でキャプチャを繰り返す
-    void _backGroundThreadHandler()
-    {
-        ayc::WGCWrapper wgcWrapper(s_hwnd);
-
-        for (;;)
-        {
-            // TODO ここにキャプチャ処理、 s_backBuffer に詰めていく
-            Sleep(1);
-        }
-    }
+    // キャプチャセッション
+    unique_ptr<ayc::CaptureSession> s_pCaptureSession;
 }
 
 //-----------------------------------------------------------------------------
@@ -84,6 +73,10 @@ namespace
     // API: StartSession
     void StartSession(ayn::HWND_INT hwnd, int fps, double durationInSec)
     {
+        // システム初期化
+        {
+            ayc::Initialize();
+        }
         // キャプチャ設定更新
         {
             scoped_lock lock(s_bgtMutex);
@@ -91,10 +84,11 @@ namespace
             s_fps = fps;
             s_durationInSec = durationInSec;
         }
-        // バックグラウンドスレッド起動
-        if (s_pBackgroundThread == nullptr)
+        // セッション起動
         {
-            s_pBackgroundThread = new thread(_backGroundThreadHandler);
+            s_pCaptureSession.reset(
+                new ayc::CaptureSession(reinterpret_cast<HWND>(hwnd))
+            );
         }
     }
 
