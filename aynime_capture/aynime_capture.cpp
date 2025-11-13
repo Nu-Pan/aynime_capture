@@ -5,6 +5,7 @@
 #include "stdafx.h"
 
 #include "py_utils.h"
+#include "wgc_wrapper.h"
 
 //-----------------------------------------------------------------------------
 // namespace
@@ -51,7 +52,7 @@ namespace
     mutex s_bgtMutex;
 
     // キャプチャ設定
-    ayn::HWND_INT s_hwnd = 0;
+    HWND s_hwnd = nullptr;
     int s_fps = 30;
     double s_durationInSec = 3;
 
@@ -64,9 +65,12 @@ namespace
     //  この関数内でキャプチャを繰り返す
     void _backGroundThreadHandler()
     {
+        ayc::WGCWrapper wgcWrapper(s_hwnd);
+
         for (;;)
         {
             // TODO ここにキャプチャ処理、 s_backBuffer に詰めていく
+            Sleep(1);
         }
     }
 }
@@ -83,7 +87,7 @@ namespace
         // キャプチャ設定更新
         {
             scoped_lock lock(s_bgtMutex);
-            s_hwnd = hwnd;
+            s_hwnd = reinterpret_cast<HWND>(hwnd);
             s_fps = fps;
             s_durationInSec = durationInSec;
         }

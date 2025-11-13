@@ -69,7 +69,7 @@ ayc::WGCWrapper::WGCWrapper(HWND hwnd)
 
         // 初期化
         D3D_FEATURE_LEVEL chosen{};
-        check_hresult(D3D11CreateDevice(
+        const HRESULT result = D3D11CreateDevice(
             /*pAdapter=*/nullptr,
             D3D_DRIVER_TYPE_HARDWARE,
             /*Software=*/nullptr,
@@ -80,7 +80,8 @@ ayc::WGCWrapper::WGCWrapper(HWND hwnd)
             d3dDevice.put(),
             &chosen,
             d3dContext.put()
-        ));
+        );
+        check_hresult(result);
     }
     // WinRT デバイス生成
     IDirect3DDevice winrtDevice{ nullptr };
@@ -109,7 +110,7 @@ ayc::WGCWrapper::WGCWrapper(HWND hwnd)
     }
     // フレームプール生成
     // TODO CreateTreeThreaded じゃなくて良い？
-    auto framePool = Direct3D11CaptureFramePool::Create(
+    Direct3D11CaptureFramePool framePool = Direct3D11CaptureFramePool::CreateFreeThreaded(
         winrtDevice,
         DirectXPixelFormat::B8G8R8A8UIntNormalized,
         2,
@@ -130,10 +131,13 @@ ayc::WGCWrapper::WGCWrapper(HWND hwnd)
 
         // テクスチャを取得
         com_ptr<ID3D11Texture2D> tex;
-        check_hresult(access->GetInterface(
-            __uuidof(ID3D11Texture2D),
-            tex.put_void()
-        ));
+        {
+            const HRESULT result = access->GetInterface(
+                __uuidof(ID3D11Texture2D),
+                tex.put_void()
+            );
+            check_hresult(result);
+        }
 
         // TODO こっからいろいろやる
         
