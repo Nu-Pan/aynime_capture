@@ -99,7 +99,10 @@ std::vector<ayc::CAPTURED_FRAME> ayc::CaptureSession::CopyFrameBuffer() const
     std::vector<CAPTURED_FRAME> snapshot;
     snapshot.reserve(m_frameBuffer.size());
     {
+        // フレームバッファを触るので排他
         std::scoped_lock<std::mutex> lock(m_guard);
+
+        // 素直にフレームバッファ全体を線形探索
         for(const auto& source : m_frameBuffer)
         {
             const double sourceRelativeInSec = toDurationInSec(nowInTimeSpan, source.timeStampInTimeSpan);
@@ -108,7 +111,18 @@ std::vector<ayc::CAPTURED_FRAME> ayc::CaptureSession::CopyFrameBuffer() const
                 continue;
             }
             snapshot.emplace_back(
-                CAPTURED_FRAME{ source.tex,sourceRelativeInSec }
+                CAPTURED_FRAME{ source.texture,sourceRelativeInSec }
+            );
+        }
+        // 最低１枚はスナップショットに含める
+        if (snapshot.empty() && !m_frameBuffer.empty())
+        {
+            const auto source = m_frameBuffer.back();
+            snapshot.emplace_back(
+                CAPTURED_FRAME{
+                    source.texture,
+                    toDurationInSec(nowInTimeSpan, source.timeStampInTimeSpan)
+                }
             );
         }
     }

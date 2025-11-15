@@ -84,10 +84,16 @@ if hwnd is None:
 # セッションをスタート
 ayn.StartSession(hwnd, 3.0)
 
+time.sleep(1.0)
+
 # バックバッファが溜まるのを待つ
 # DEBUG 一旦無限ループにしてる
 while True:
-    s = ayn.Snapshot()
+    snapshot = ayn.Snapshot()
+    frame_index = snapshot.GetFrameIndexByTime(0.1);
+    frame_buffer = snapshot.GetFrameBuffer(frame_index)
+    print(f'frame_index = {frame_index}')
+    # print(frame_buffer)
     time.sleep(1.0)
 
 # try:

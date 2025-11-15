@@ -84,14 +84,108 @@ namespace
         //---------------------------------------------------------------------
         std::size_t GetFrameIndexByTime(double timeInSec) const
         {
-
-            ayc::throw_not_impl("GetFrameIndexByTime is not implemented yet.");
+            // １枚も無い場合はエラー
+            // @note: 普通は最低でも１枚はあるはず
+            if (m_frameBuffer.empty()) {
+                ayc::throw_runtime_error("No frames in snapshot.");
+            }
+            // 相対時刻が指定と最も近いフレームを線形探索
+            std::size_t bestIndex = 0;
+            {
+                double bestDiff = std::numeric_limits<double>::max();
+                for (std::size_t i = 0; i < m_frameBuffer.size(); ++i)
+                {
+                    double diff = std::abs(m_frameBuffer[i].timestamp - timeInSec);
+                    if (diff < bestDiff)
+                    {
+                        bestDiff = diff;
+                        bestIndex = i;
+                    }
+                }
+            }
+            return bestIndex;
         }
 
         //---------------------------------------------------------------------
-        py::object GetFrameBuffer(std::size_t frameIndex) const
+        py::bytes GetFrameBuffer(std::size_t frameIndex) const
         {
-            ayc::throw_not_impl("GetFrameBuffer is not implemented yet.");
+            // テクスチャを取得
+            const auto& srcTex = m_frameBuffer[frameIndex].texture;
+            if (!srcTex) {
+                ayc::throw_runtime_error("Texture is null.");
+            }
+            // テクスチャの desc を取得
+            D3D11_TEXTURE2D_DESC srcDesc{};
+            {
+                srcTex->GetDesc(&srcDesc);
+            }
+            // 読み出し先テクスチャを生成
+            ayc::com_ptr<ID3D11Texture2D> stgTex;
+            {
+                // 記述
+                D3D11_TEXTURE2D_DESC stagingDesc = srcDesc;
+                {
+                    stagingDesc.Usage = D3D11_USAGE_STAGING;
+                    stagingDesc.BindFlags = 0;
+                    stagingDesc.CPUAccessFlags = D3D10_CPU_ACCESS_READ;
+                    stagingDesc.MiscFlags = 0;
+                }
+                // 生成
+                const HRESULT result = ayc::D3DDevice()->CreateTexture2D(
+                    &stagingDesc,
+                    nullptr,
+                    stgTex.put()
+                );
+                if (result != S_OK)
+                {
+                    ayc::throw_runtime_error("Failed to CreateTexture2D");
+                }
+            }
+            // DEFAULT --> STATING
+            {
+                ayc::D3DContext()->CopyResource(stgTex.get(), srcTex.get());
+            }
+            // STAGING --> システムメモリ
+            std::string buffer;
+            {
+                // エイリアス
+                const UINT width = srcDesc.Width;
+                const UINT height = srcDesc.Height;
+                const size_t bytesPerPixel = 4;
+                const size_t rowSizeInBytes = width * bytesPerPixel;
+                const size_t bufferSizeInBytes = rowSizeInBytes * height;
+
+                // 読み出し先バッファーをリサイズ
+                {
+                    buffer.resize(bufferSizeInBytes);
+                }
+                // マップ
+                D3D11_MAPPED_SUBRESOURCE mapped{};
+                {
+                    const HRESULT result = ayc::D3DContext()->Map(stgTex.get(), 0, D3D11_MAP_READ, 0, &mapped);
+                    if (result != S_OK)
+                    {
+                        ayc::throw_runtime_error("Failed to Map");
+                    }
+                }
+                // コピー
+                auto pDstBegin = reinterpret_cast<std::uint8_t* const>(buffer.data());
+                const auto* pSrcBegin = static_cast<const std::uint8_t*>(mapped.pData);
+                for(UINT u=0; u<height; ++u)
+                {
+                    std::memcpy(
+                        pDstBegin + (u * rowSizeInBytes),
+                        pSrcBegin + (u * mapped.RowPitch),
+                        rowSizeInBytes
+                    );
+                }
+                // アンマップ
+                {
+                    ayc::D3DContext()->Unmap(stgTex.get(), 0);
+                }
+            }
+            // bytes に変換して終了
+            return py::bytes(buffer);
         }
 
     private:

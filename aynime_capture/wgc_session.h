@@ -5,7 +5,7 @@ namespace ayc
 	// キャプチャされたフレーム１枚を表す構造体
 	struct CAPTURED_FRAME
 	{
-		com_ptr<ID3D11Texture2D> tex;
+		com_ptr<ID3D11Texture2D> texture;
 		double timestamp;
 	};
 
@@ -25,7 +25,7 @@ namespace ayc
 		// CaptureSession が内部的に保持するフレーム情報
 		struct _RAW_CAPTURED_FRAME
 		{
-			com_ptr<ID3D11Texture2D> tex;
+			com_ptr<ID3D11Texture2D> texture;
 			TimeSpan timeStampInTimeSpan;
 		};
 
