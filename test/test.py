@@ -82,11 +82,12 @@ if hwnd is None:
     raise RuntimeError("対象ウィンドウが見つかりませんでした。ブラウザ等を起動してください。")
 
 # セッションをスタート
-ayn.StartSession(hwnd, 30, 3.0)
+ayn.StartSession(hwnd, 3.0)
 
 # バックバッファが溜まるのを待つ
 # DEBUG 一旦無限ループにしてる
 while True:
+    s = ayn.Snapshot()
     time.sleep(1.0)
 
 # try:

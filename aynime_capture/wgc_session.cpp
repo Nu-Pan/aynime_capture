@@ -2,50 +2,28 @@
 // Include
 //-----------------------------------------------------------------------------
 
+// pch
 #include "stdafx.h"
 
+// self
 #include "wgc_session.h"
 
+// other
 #include "wgc_system.h"
-#include "py_utils.h"
+#include "utils.h"
 
 //-----------------------------------------------------------------------------
-// namespace
-//-----------------------------------------------------------------------------
-
-// WinRT
-using winrt::com_ptr;
-using winrt::guid_of;
-using winrt::put_abi;
-
-typedef winrt::Windows::Foundation::IInspectable WinRTIInspectable;
-
-// WinRT Graphics Capture
-using winrt::Windows::Graphics::Capture::GraphicsCaptureItem;
-using winrt::Windows::Graphics::Capture::Direct3D11CaptureFramePool;
-using winrt::Windows::Graphics::Capture::GraphicsCaptureSession;
-
-// WinRT Direct3D 11
-using winrt::Windows::Graphics::DirectX::DirectXPixelFormat;
-using winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice;
-using Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess;
-
-//-----------------------------------------------------------------------------
-// Link-Local Definition
-//-----------------------------------------------------------------------------
-namespace
-{
-}
-
-//-----------------------------------------------------------------------------
-// Session
+// CaptureSession
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// コンストラクタ
-ayc::CaptureSession::CaptureSession(HWND hwnd)
+ayc::CaptureSession::CaptureSession(HWND hwnd, double holdInSec)
 : m_framePool(nullptr)
+, m_revoker()
 , m_captureSession(nullptr)
+, m_guard()
+, m_holdInSec(holdInSec)
+, m_frameBuffer()
 {
     // キャプチャアイテム生成
     GraphicsCaptureItem captureItem{ nullptr };
@@ -73,55 +51,144 @@ ayc::CaptureSession::CaptureSession(HWND hwnd)
         captureItem.Size()
     );
     // ハンドラ登録
-    m_framePool.FrameArrived([&](const Direct3D11CaptureFramePool & sender, const WinRTIInspectable& args ) {
-        // フレームを取得
-        auto frame = sender.TryGetNextFrame();
-        if (!frame)
-        {
-            return;
-        }
-        // サーフェスを取得
-        auto surface = frame.Surface();
-        com_ptr<IDirect3DDxgiInterfaceAccess> access = surface.as<IDirect3DDxgiInterfaceAccess>();
-
-        // テクスチャを取得
-        com_ptr<ID3D11Texture2D> tex;
-        {
-            const HRESULT result = access->GetInterface(
-                __uuidof(ID3D11Texture2D),
-                tex.put_void()
-            );
-            if (result != S_OK)
-            {
-                ayc::throw_runtime_error("Failed to GetInterface");
-            }
-        }
-
-        // TODO こっからいろいろやる
-        
-    });
+    m_revoker = m_framePool.FrameArrived(
+        winrt::auto_revoke,
+        { this, &CaptureSession::OnFrameArrived }
+    );
     // セッション生成
     m_captureSession = m_framePool.CreateCaptureSession(captureItem);
     {
         m_captureSession.IsCursorCaptureEnabled(false);
         m_captureSession.IsBorderRequired(false);
-    }
-    // キャプチャスタート
-    {
         m_captureSession.StartCapture();
     }
 }
 
 //-----------------------------------------------------------------------------
-// デストラクタ
 ayc::CaptureSession::~CaptureSession()
 {
+    // セッション終了
     if (m_captureSession)
     {
         m_captureSession.Close();
     }
+    // イベント登録解除
+    {
+        m_revoker.revoke();
+    }
+    // フレームプール終了
     if (m_framePool)
     {
         m_framePool.Close();
+    }
+}
+
+//-----------------------------------------------------------------------------
+// バックバッファのコピーを得る
+std::vector<ayc::CAPTURED_FRAME> ayc::CaptureSession::CopyFrameBuffer() const
+{
+    // 「現在」を確定させる
+    const TimeSpan nowInTimeSpan = []() {
+        return NowFromQPC();
+    }();
+    // _RAW_CAPTURED_FRAME --> CAPTURED_FRAME
+    /* @note:
+        「TimeSpan 表現のタイムスタンプ」から「double 表現の現在時刻からの差分」に変換する。
+        ついでに、指定秒数を超えた過去のフレームはこの時点でカット。
+    */
+    std::vector<CAPTURED_FRAME> snapshot;
+    snapshot.reserve(m_frameBuffer.size());
+    {
+        std::scoped_lock<std::mutex> lock(m_guard);
+        for(const auto& source : m_frameBuffer)
+        {
+            const double sourceRelativeInSec = toDurationInSec(nowInTimeSpan, source.timeStampInTimeSpan);
+            if (sourceRelativeInSec > m_holdInSec)
+            {
+                continue;
+            }
+            snapshot.emplace_back(
+                CAPTURED_FRAME{ source.tex,sourceRelativeInSec }
+            );
+        }
+    }
+    return snapshot;
+}
+
+//-----------------------------------------------------------------------------
+void ayc::CaptureSession::OnFrameArrived(
+    const Direct3D11CaptureFramePool& sender,
+    const WinRTIInspectable& args
+)
+{
+    // 「現在」を確定させる
+    const TimeSpan nowInTimeSpan = []() {
+        return NowFromQPC();
+    }();
+    // フレームを取得
+    /* @note:
+        現在到着している中で最新の１フレームだけを使い、それ以外は読み捨てる。
+        フレームバッファをマメにクリーンナップしたいので、フレームが無い場合も処理継続。
+    */
+    const Direct3D11CaptureFrame frame = [&]()
+    {
+        Direct3D11CaptureFrame f_ret = sender.TryGetNextFrame();
+        for (;;)
+        {
+            Direct3D11CaptureFrame f_peek = sender.TryGetNextFrame();
+            if (!f_peek)
+            {
+                return f_ret;
+            }
+            f_ret = f_peek;
+        }
+    }();
+    // D3D11 のテクスチャを取得
+    com_ptr<ID3D11Texture2D> tex;
+    if( frame )
+    {
+        const auto surface = frame.Surface();
+        const com_ptr<IDirect3DDxgiInterfaceAccess> access = surface.as<IDirect3DDxgiInterfaceAccess>();
+        const HRESULT result = access->GetInterface(
+            __uuidof(ID3D11Texture2D),
+            tex.put_void()
+        );
+        if (result != S_OK)
+        {
+            ayc::throw_runtime_error("Failed to GetInterface");
+        }
+    }
+    // フレームバッファに詰める
+    {
+        // フレームバッファ触るので排他
+        std::scoped_lock<std::mutex> lock(m_guard);
+
+        // フレームをバッファに追加
+        if (frame && tex)
+        {
+            m_frameBuffer.emplace_back(
+                _RAW_CAPTURED_FRAME{ tex, frame.SystemRelativeTime() }
+            );
+        }
+        // 賞味期限切れのフレームをバッファから除外
+        /* @note:
+            必ず何某かのフレームが１つは返るようにしたいので、１フレームは残す。
+        */
+        for (;;)
+        {
+            if (m_frameBuffer.size() <= 1)
+            {
+                break;
+            }
+            const double frontRelativeInSec = toDurationInSec(
+                nowInTimeSpan,
+                m_frameBuffer.front().timeStampInTimeSpan
+            );
+            if (frontRelativeInSec <= m_holdInSec)
+            {
+                break;
+            }
+            m_frameBuffer.pop_front();
+        }
     }
 }

@@ -2,9 +2,11 @@
 // Include
 //-----------------------------------------------------------------------------
 
+// pch
 #include "stdafx.h"
 
-#include "py_utils.h"
+// other
+#include "utils.h"
 #include "wgc_system.h"
 #include "wgc_session.h"
 
@@ -13,27 +15,6 @@
 //-----------------------------------------------------------------------------
 
 namespace py = pybind11;
-using namespace std;
-
-//-----------------------------------------------------------------------------
-// Aynime Definitions(Forward)
-//-----------------------------------------------------------------------------
-namespace ayn
-{
-    //-------------------------------------------------------------------------
-    // Types
-    //-------------------------------------------------------------------------
-
-    // ウィンドウハンドルの別名
-    using HWND_INT = uintptr_t;
-
-    // キャプチャしたフレーム１枚を表す構造体
-    struct CaptureFrame
-    {
-        double timeInSec;
-        void* pFrame;
-    };
-}
 
 //-----------------------------------------------------------------------------
 // Link-Local Definition
@@ -41,27 +22,22 @@ namespace ayn
 namespace
 {
     //-------------------------------------------------------------------------
+    // Types
+    //-------------------------------------------------------------------------
+
+    // キャプチャしたフレーム１枚を表す構造体
+    struct CaptureFrame
+    {
+        double timeInSec;
+        void* pFrame;
+    };
+
+    //-------------------------------------------------------------------------
     // Variables
     //-------------------------------------------------------------------------
 
-    // バックグラウンドスレッド
-    // NOTE
-    //  プロセスと運命を共にする前提なので、解体処理は不要。
-    thread* s_pBackgroundThread = nullptr;
-
-    // BG スレッド系ミューテックス
-    mutex s_bgtMutex;
-
-    // キャプチャ設定
-    HWND s_hwnd = nullptr;
-    int s_fps = 30;
-    double s_durationInSec = 3;
-
-    // バックバッファ
-    deque<ayn::CaptureFrame> s_backBuffer;
-
     // キャプチャセッション
-    unique_ptr<ayc::CaptureSession> s_pCaptureSession;
+    std::unique_ptr<ayc::CaptureSession> s_pCaptureSession;
 }
 
 //-----------------------------------------------------------------------------
@@ -70,24 +46,16 @@ namespace
 namespace
 {
     //-------------------------------------------------------------------------
-    // API: StartSession
-    void StartSession(ayn::HWND_INT hwnd, int fps, double durationInSec)
+    void StartSession(uintptr_t hwnd, double holdInSec)
     {
         // システム初期化
         {
             ayc::Initialize();
         }
-        // キャプチャ設定更新
-        {
-            scoped_lock lock(s_bgtMutex);
-            s_hwnd = reinterpret_cast<HWND>(hwnd);
-            s_fps = fps;
-            s_durationInSec = durationInSec;
-        }
         // セッション起動
         {
             s_pCaptureSession.reset(
-                new ayc::CaptureSession(reinterpret_cast<HWND>(hwnd))
+                new ayc::CaptureSession(reinterpret_cast<HWND>(hwnd), holdInSec)
             );
         }
     }
@@ -100,29 +68,34 @@ namespace
     {
     public:
         //---------------------------------------------------------------------
-        // コンストラクタ
-        Snapshot() = default;
+        Snapshot()
+        : m_frameBuffer()
+        {
+            if (!s_pCaptureSession)
+            {
+                ayc::throw_runtime_error("Session not started. You should call `StartSession` before creating `Snapshot`.");
+            }
+            m_frameBuffer = s_pCaptureSession->CopyFrameBuffer();
+        }
 
         //---------------------------------------------------------------------
-        // デストラクタ
         ~Snapshot() = default;
 
         //---------------------------------------------------------------------
-        // API: GetFrameIndexByTime
-        std::size_t GetFrameIndexByTime(double time_in_sec) const
+        std::size_t GetFrameIndexByTime(double timeInSec) const
         {
+
             ayc::throw_not_impl("GetFrameIndexByTime is not implemented yet.");
         }
 
         //---------------------------------------------------------------------
-        // API: GetFrameBuffer
-        py::object GetFrameBuffer(std::size_t frame_index) const
+        py::object GetFrameBuffer(std::size_t frameIndex) const
         {
             ayc::throw_not_impl("GetFrameBuffer is not implemented yet.");
         }
 
     private:
-        vector<ayn::CaptureFrame> m_frames;
+        std::vector<ayc::CAPTURED_FRAME> m_frameBuffer;
     };
 }
 
@@ -139,9 +112,8 @@ PYBIND11_MODULE(aynime_capture, m) {
         "StartSession",
         &StartSession,
         py::arg("hwnd"),
-        py::arg("fps"),
-        py::arg("duration_in_sec"),
-        "Start the capture session (skeleton; not implemented)."
+        py::arg("hold_in_sec"),
+        "Start the capture session."
     );
 
     // Snapshot
@@ -165,13 +137,15 @@ PYBIND11_MODULE(aynime_capture, m) {
         // GetFrameIndexByTime
         .def(
             "GetFrameIndexByTime",
-            &Snapshot::GetFrameIndexByTime, py::arg("time_in_sec"),
+            &Snapshot::GetFrameIndexByTime,
+            py::arg("time_in_sec"),
             "Return frame index closest to the given relative time."
         )
         // GetFrameBuffer
         .def(
             "GetFrameBuffer",
-            &Snapshot::GetFrameBuffer, py::arg("frame_index"),
+            &Snapshot::GetFrameBuffer,
+            py::arg("frame_index"),
             "Return frame buffer for the given index."
         );
 }

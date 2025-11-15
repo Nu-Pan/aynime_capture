@@ -127,7 +127,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="aynime_capture.cpp" />
-    <ClCompile Include="py_utils.cpp" />
+    <ClCompile Include="utils.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -136,7 +136,7 @@
     <ClCompile Include="wgc_session.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="py_utils.h" />
+    <ClInclude Include="utils.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="wgc_system.h" />
     <ClInclude Include="wgc_session.h" />

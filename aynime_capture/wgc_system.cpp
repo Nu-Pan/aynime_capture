@@ -2,34 +2,23 @@
 // Include
 //-----------------------------------------------------------------------------
 
+// pch
 #include "stdafx.h"
 
+// self
 #include "wgc_system.h"
 
-#include "py_utils.h"
-
-//-----------------------------------------------------------------------------
-// namespace
-//-----------------------------------------------------------------------------
-
-// WinRT
-using winrt::com_ptr;
-using winrt::put_abi;
-
-// WinRT Graphics Capture
-using winrt::Windows::Graphics::Capture::GraphicsCaptureSession;
-
-// WinRT Direct3D 11
-using winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice;
+// other
+#include "utils.h"
 
 //-----------------------------------------------------------------------------
 // Link-Local Variables
 //-----------------------------------------------------------------------------
 namespace
 {
-	com_ptr<ID3D11Device> s_d3dDevice;
-	com_ptr<ID3D11DeviceContext> s_d3dContext;
-	IDirect3DDevice s_wrtDevice{ nullptr };
+	ayc::com_ptr<ID3D11Device> s_d3dDevice;
+    ayc::com_ptr<ID3D11DeviceContext> s_d3dContext;
+    ayc::IDirect3DDevice s_wrtDevice{ nullptr };
 }
 
 //-----------------------------------------------------------------------------
@@ -116,21 +105,21 @@ void ayc::Finalize()
 
 //-----------------------------------------------------------------------------
 // D3D 11 Device
-const com_ptr<ID3D11Device>& ayc::D3DDevice()
+const ayc::com_ptr<ID3D11Device>& ayc::D3DDevice()
 {
     return s_d3dDevice;
 }
 
 //-----------------------------------------------------------------------------
 // D3D 11 Device Context
-const com_ptr<ID3D11DeviceContext>& ayc::D3DContext()
+const ayc::com_ptr<ID3D11DeviceContext>& ayc::D3DContext()
 {
     return s_d3dContext;
 }
 
 //-----------------------------------------------------------------------------
 // WinRT D3D Device
-const IDirect3DDevice& ayc::WRTDevice()
+const ayc::IDirect3DDevice& ayc::WRTDevice()
 {
     return s_wrtDevice;
 }

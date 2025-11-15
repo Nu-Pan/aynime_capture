@@ -2,8 +2,6 @@
 
 namespace ayc
 {
-	using winrt::com_ptr;
-	using winrt::Windows::Graphics::DirectX::Direct3D11::IDirect3DDevice;
 
 	// ‰Šú‰»
 	void Initialize();
