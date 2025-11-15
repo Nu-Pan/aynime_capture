@@ -36,7 +36,18 @@ void ayc::Initialize()
     }
 
     // WinRT 初期化
-    winrt::init_apartment(winrt::apartment_type::multi_threaded);
+    {
+        try
+        {
+            winrt::init_apartment(winrt::apartment_type::single_threaded);
+        }
+        catch (...)
+        {
+            ayc::throw_runtime_error("Initialize(): init_apartment() failed (COM apartment conflict?)");
+        }
+    }
+
+    // 必要機能が未サポートならエラー
     if (!GraphicsCaptureSession::IsSupported())
     {
         Finalize();

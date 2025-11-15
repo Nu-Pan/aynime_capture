@@ -82,6 +82,12 @@ namespace
         ~Snapshot() = default;
 
         //---------------------------------------------------------------------
+        void Exit()
+        {
+            m_frameBuffer.clear();
+        }
+
+        //---------------------------------------------------------------------
         std::size_t GetFrameIndexByTime(double timeInSec) const
         {
             // １枚も無い場合はエラー
@@ -107,8 +113,13 @@ namespace
         }
 
         //---------------------------------------------------------------------
-        py::bytes GetFrameBuffer(std::size_t frameIndex) const
+        py::tuple GetFrameBuffer(std::size_t frameIndex) const
         {
+            /* TODO
+                - 転送中は GIL 切れるらしい？
+                - アルファチャンネルいらない
+            */
+            
             // テクスチャを取得
             const auto& srcTex = m_frameBuffer[frameIndex].texture;
             if (!srcTex) {
@@ -185,7 +196,11 @@ namespace
                 }
             }
             // bytes に変換して終了
-            return py::bytes(buffer);
+            return py::make_tuple(
+                py::bytes(buffer),
+                static_cast<std::size_t>(srcDesc.Width),
+                static_cast<std::size_t>(srcDesc.Height)
+            );
         }
 
     private:
@@ -226,7 +241,7 @@ PYBIND11_MODULE(aynime_capture, m) {
         // with 句(exit)
         .def(
             "__exit__",
-            [](Snapshot&, py::object, py::object, py::object) { return false; }
+            [](Snapshot& snapshot, py::object, py::object, py::object) { snapshot.Exit(); return false; }
         )
         // GetFrameIndexByTime
         .def(
@@ -240,6 +255,6 @@ PYBIND11_MODULE(aynime_capture, m) {
             "GetFrameBuffer",
             &Snapshot::GetFrameBuffer,
             py::arg("frame_index"),
-            "Return frame buffer for the given index."
+            "Return (frame_buffer, width, height) for the given index."
         );
 }
