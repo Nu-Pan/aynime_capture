@@ -111,7 +111,7 @@ std::vector<ayc::CAPTURED_FRAME> ayc::CaptureSession::CopyFrameBuffer() const
                 continue;
             }
             snapshot.emplace_back(
-                CAPTURED_FRAME{ source.texture,sourceRelativeInSec }
+                CAPTURED_FRAME{ source.texture, sourceRelativeInSec }
             );
         }
         // 最低１枚はスナップショットに含める
@@ -157,19 +157,45 @@ void ayc::CaptureSession::OnFrameArrived(
             f_ret = f_peek;
         }
     }();
-    // D3D11 のテクスチャを取得
-    com_ptr<ID3D11Texture2D> tex;
-    if( frame )
+    // CaptureFramePool バックバッファの D3D11 テクスチャを取得
+    com_ptr<ID3D11Texture2D> cfpTex;
+    if (frame)
     {
         const auto surface = frame.Surface();
         const com_ptr<IDirect3DDxgiInterfaceAccess> access = surface.as<IDirect3DDxgiInterfaceAccess>();
         const HRESULT result = access->GetInterface(
             __uuidof(ID3D11Texture2D),
-            tex.put_void()
+            cfpTex.put_void()
         );
         if (result != S_OK)
         {
             ayc::throw_runtime_error("Failed to GetInterface");
+        }
+    }
+    // フレームバッファ用にテクスチャのコピーを取る
+    com_ptr<ID3D11Texture2D> fbTex;
+    if (cfpTex)
+    {
+        // desc
+        D3D11_TEXTURE2D_DESC desc{};
+        {
+            cfpTex->GetDesc(&desc);
+        }
+        // 生成
+        {
+            const HRESULT result = ayc::D3DDevice()->CreateTexture2D(
+                &desc,
+                /*pInitialData=*/nullptr,
+                fbTex.put()
+            );
+            if (result != S_OK)
+            {
+                ayc::throw_runtime_error("Failed to CreateTexture2D");
+            }
+        }
+        // コピー
+        {
+            ayc::D3DContext()->CopyResource(fbTex.get(), cfpTex.get());
         }
     }
     // フレームバッファに詰める
@@ -178,10 +204,10 @@ void ayc::CaptureSession::OnFrameArrived(
         std::scoped_lock<std::mutex> lock(m_guard);
 
         // フレームをバッファに追加
-        if (frame && tex)
+        if (fbTex)
         {
             m_frameBuffer.emplace_back(
-                _RAW_CAPTURED_FRAME{ tex, frame.SystemRelativeTime() }
+                _RAW_CAPTURED_FRAME{ fbTex, frame.SystemRelativeTime() }
             );
         }
         // 賞味期限切れのフレームをバッファから除外

@@ -119,7 +119,6 @@ namespace
                 - 転送中は GIL 切れるらしい？
                 - アルファチャンネルいらない
             */
-            
             // テクスチャを取得
             const auto& srcTex = m_frameBuffer[frameIndex].texture;
             if (!srcTex) {
