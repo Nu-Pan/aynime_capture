@@ -5,7 +5,7 @@
 - Windows 専用で、デスクトップのキャプチャ機能を提供する
 - [Nu-Pan/aynime_issen_style: えぃにめ一閃流奥義「一閃」](https://github.com/Nu-Pan/aynime_issen_style) からの利用を前提としている
 
-## 開発環境
+## ライブラリの開発環境
 - Visual Studio 2022 上での開発を前提とする
 - vscode 上での開発は想定しない
 
@@ -23,7 +23,7 @@
 
 ## ライブラリ基本要件
 - 指定されたウィンドウ(HWND で指定)をキャプチャできる
-- 指定されたフレームレートでのキャプチャがライブラリ側で並列で行われる
+- 指定ウィンドウのフレームキャプチャがライブラリ内スレッドで並列に実行される
 - 過去指定秒数間のキャプチャ画像はライブラリ側でバッファリングされる
 - バッファ上の任意のフレームをアプリから取得可能
 
@@ -36,10 +36,9 @@
     - バッファリングを可能な限り「源流」側で留める（アプリからの要求が来るまでメインメモリへの転送を行わない）
 
 ## ライブラリの基本的な API
-- 関数 `StartSession(hwnd, fps, duration_in_sec)`
+- 関数 `StartSession(hwnd, duration_in_sec)`
     - キャプチャセッションを開始する
     - セッションは指定されたウィンドウ(`hwnd`)を、バックグラウンドでキャプチャし続ける
-    - キャプチャは１秒間に `fps` 回のペースで行われる
     - 過去 `duration_in_sec` 秒間のキャプチャ結果がバッファリングされる
     - キャプチャ・バッファリングはライブラリ内のスレッド上で並列に行われる
     - すでに有効なセッションが存在する場合、新しい `StartSession` の呼び出しで挙動が上書きされる
@@ -64,7 +63,7 @@ from time import sleep
 
 hwnd = ... # 別の方法でウィンドウは指定される
 
-ayn.StartSession(hwnd, 30, 3)
+ayn.StartSession(hwnd, 3)
 
 # バックバッファが溜まるのを待つ
 sleep(4)
@@ -86,7 +85,7 @@ from time import sleep
 
 hwnd = ... # 別の方法でウィンドウは指定される
 
-ayn.StartSession(hwnd, 30, 3)
+ayn.StartSession(hwnd, 3)
 
 # バックバッファが溜まるのを待つ
 sleep(4)
@@ -104,12 +103,39 @@ with Snapshot() as s:
 
 ```
 
-# プロジェクト構成
+# ディレクトリ構成
 
 ## `aynime_capture`
+- python パッケージ公開 API 定義用
+- Visual Studio 環境からは使わない
+
+## `core`
 - ライブラリ本体
-- C++
+- C++ プロジェクト
 
 ## `text.py`
-- ライブラリをごく簡単にデバッグするためのプロジェクト
-- 動作確認だけが目的で、真面目なテストではない
+- ライブラリの動作確認用
+- python プロジェクト
+
+# ビルド・実行・インストール方法
+
+## Visual Studio 上で `aynime_capture` を開発
+- 手順
+    - `aynime_capture.sln` を開く
+    - `test` を「スタートアッププロジェクト」に設定
+    - F5 でデバッグ実行
+- 用途
+    - `aynime_capture` のソースにブレークを仕掛けてデバッグしたい場合
+
+## ローカル上の別のアプリ上で `aynime_capture` を開発
+- 手順
+    - アプリ側で `pip install -e <path to aynime_capture> --config-settings editable_mode=compat` でインストール（pylance の都合で compat をつける）
+    - vscode 上で `Python: Clear Cache and Reload Window`
+- 用途
+    - アプリ上で `aynime_capture` の動作確認を取りたい場合
+
+## 別アプリ開発
+- 手順
+    - `pip install aynime_capture @ git+https://github.com/Nu-Pan/aynime_capture`
+- 用途
+    - `aynime_capture` はいじらずにアプリ開発だけしたい場合

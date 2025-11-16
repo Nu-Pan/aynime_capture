@@ -12,7 +12,7 @@ from ctypes import wintypes
 dwmapi = ctypes.WinDLL("dwmapi")
 
 # local
-import aynime_capture as ayn
+import _aynime_capture as ayc
 
 
 def _is_cloaked(hwnd: int) -> bool:
@@ -83,14 +83,14 @@ if hwnd is None:
 
 # セッションをスタート
 print(f"hwnd = {hwnd}")
-ayn.StartSession(hwnd, 3.0)
+ayc.StartSession(hwnd, 3.0)
 
 time.sleep(1.0)
 
 # バックバッファが溜まるのを待つ
 # DEBUG 一旦無限ループにしてる
 while True:
-    with ayn.Snapshot() as snapshot:
+    with ayc.Snapshot() as snapshot:
         frame_index = snapshot.GetFrameIndexByTime(0.1)
         frame_buffer, width, height = snapshot.GetFrameBuffer(frame_index)
         print(f'frame_index = {frame_index}')
@@ -100,7 +100,7 @@ while True:
         time.sleep(1.0)
 
 # try:
-#     with ayn.Snapshot() as s:
+#     with ayc.Snapshot() as s:
 #         # Either name works; both raise NotImplementedError in skeleton
 #         idx = s.GetFrameIndexByTime(0.1)
 #         # idx = s.GetFrameIndexBytTime(0.1)  # alias supported

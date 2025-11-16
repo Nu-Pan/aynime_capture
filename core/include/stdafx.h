@@ -28,7 +28,6 @@
 #include <thread>
 #include <mutex>
 #include <deque>
-#include <queue>
 #include <vector>
 #include <string>
 #include <atomic>

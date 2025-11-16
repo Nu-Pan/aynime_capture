@@ -1,4 +1,4 @@
-# 環境
+# `pip install` に必要な環境
 
 ## Visual Studio 2022
 - ワークロード

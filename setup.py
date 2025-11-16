@@ -4,13 +4,16 @@ from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 ext_modules = [
     Pybind11Extension(
-        "aynime_capture",
+        "aynime_capture._aynime_capture",
         [
-            "aynime_capture/aynime_capture.cpp",
-            "aynime_capture/utils.cpp",
-            "aynime_capture/stdafx.cpp",
-            "aynime_capture/wgc_system.cpp",
-            "aynime_capture/wgc_session.cpp"
+            "core/source/core.cpp",
+            "core/source/utils.cpp",
+            "core/source/stdafx.cpp",
+            "core/source/wgc_system.cpp",
+            "core/source/wgc_session.cpp"
+        ],
+        include_dirs=[
+            "core/include"
         ],
         libraries=[
             "d3d11",
@@ -29,7 +32,12 @@ setup(
     version="0.1.0",
     description="Windows desktop capture library",
     ext_modules=ext_modules,
-    cmdclass={"build_ext": build_ext},
+    cmdclass={
+        "build_ext": build_ext
+    },
     zip_safe=False,
-    packages=[]
+    packages=["aynime_capture"],
+    package_data={
+        "aynime_capture": ["py.typed"]
+    }
 )

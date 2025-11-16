@@ -211,7 +211,7 @@ namespace
 // PyBind11 Definitions
 //-------------------------------------------------------------------------
 
-PYBIND11_MODULE(aynime_capture, m) {
+PYBIND11_MODULE(_aynime_capture, m) {
 
     m.doc() = "Windows desktop capture library";
 
@@ -221,7 +221,7 @@ PYBIND11_MODULE(aynime_capture, m) {
         &StartSession,
         py::arg("hwnd"),
         py::arg("hold_in_sec"),
-        "Start the capture session."
+        "Start or Restart the capture session."
     );
 
     // Snapshot

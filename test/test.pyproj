@@ -29,8 +29,8 @@
     <Compile Include="test.py" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\aynime_capture\aynime_capture.vcxproj">
-      <Name>aynime_capture</Name>
+    <ProjectReference Include="..\core\core.vcxproj">
+      <Name>core</Name>
       <Project>{5d8f91db-5226-5b60-8b60-2285b6d8e223}</Project>
       <Private>True</Private>
     </ProjectReference>
