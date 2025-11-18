@@ -9,73 +9,245 @@
 #include "utils.h"
 #include "wgc_system.h"
 #include "wgc_session.h"
+#include "async_texture_readback.h"
 
 //-----------------------------------------------------------------------------
-// namespace
+// Aynime Capture Definitions
 //-----------------------------------------------------------------------------
-
-namespace py = pybind11;
-
-//-----------------------------------------------------------------------------
-// Link-Local Definition
-//-----------------------------------------------------------------------------
-namespace
+namespace ayc
 {
     //-------------------------------------------------------------------------
-    // Types
+    // Forward Declaration
     //-------------------------------------------------------------------------
 
-    // キャプチャしたフレーム１枚を表す構造体
-    struct CaptureFrame
+    class Session;
+    class Snapshot;
+
+    //-------------------------------------------------------------------------
+    // Session
+    //-------------------------------------------------------------------------
+
+    class Session
     {
-        double timeInSec;
-        void* pFrame;
+        friend class Snapshot;
+
+    public:
+        //---------------------------------------------------------------------
+        Session(uintptr_t hwnd, double holdInSec)
+        : m_pWGCSession()
+        {
+            // システム初期化
+            {
+                ayc::Initialize();
+            }
+            // セッション開始
+            {
+                m_pWGCSession.reset(
+                    new ayc::WGCSession(reinterpret_cast<HWND>(hwnd), holdInSec)
+                );
+            }
+        }
+
+        //---------------------------------------------------------------------
+        ~Session() = default;
+
+        //---------------------------------------------------------------------
+        void Close()
+        {
+            /* @note:
+                python は GC なので shared_ptr の参照カウントは仮定できない。
+                しかし、確実にセッションを止めないといけない。
+                なので、参照を切る前に明示的に Close を呼び出す。
+            */
+            if (m_pWGCSession)
+            {
+                m_pWGCSession->Close();
+                m_pWGCSession.reset();
+            }
+        }
+
+        //---------------------------------------------------------------------
+        py::tuple GetFrameByTime(double timeInSec) const
+        {
+            /* @note:
+                単一フレームキャプチャはいつ呼び出されるかわからない。
+                呼び出されたらなるはやでフレームを返さないといけない。
+                よって、この関数内で必要なすべてを実行しきる。
+            */
+            /* TODO
+                - 転送中は GIL 切れるらしい？
+                - アルファチャンネルいらない
+            */
+            // セッションが停止済みならエラー
+            if (!m_pWGCSession)
+            {
+                ayc::throw_runtime_error("m_pWGCSession == nullptr");
+            }
+            // テクスチャを取得
+            const auto& srcTex = m_pWGCSession->CopyFrame(timeInSec);
+            if (!srcTex) {
+                ayc::throw_runtime_error("Texture is null.");
+            }
+            // テクスチャを読み出し
+            std::size_t width;
+            std::size_t height;
+            std::string textureBuffer;
+            ReadbackTexture(
+                width,
+                height,
+                textureBuffer,
+                srcTex
+            );
+            // bytes に変換して終了
+            return py::make_tuple(
+                width,
+                height,
+                py::bytes(textureBuffer)
+            );
+        }
+
+    private:
+        std::shared_ptr<ayc::WGCSession> m_pWGCSession;
     };
 
     //-------------------------------------------------------------------------
-    // Variables
-    //-------------------------------------------------------------------------
-
-    // キャプチャセッション
-    std::unique_ptr<ayc::CaptureSession> s_pCaptureSession;
-}
-
-//-----------------------------------------------------------------------------
-// Aynime Definitions
-//-----------------------------------------------------------------------------
-namespace
-{
-    //-------------------------------------------------------------------------
-    void StartSession(uintptr_t hwnd, double holdInSec)
-    {
-        // システム初期化
-        {
-            ayc::Initialize();
-        }
-        // セッション起動
-        {
-            s_pCaptureSession.reset(
-                new ayc::CaptureSession(reinterpret_cast<HWND>(hwnd), holdInSec)
-            );
-        }
-    }
-
-    //-------------------------------------------------------------------------
-    // API: Snapshot Class
+    // Snapshot
     //-------------------------------------------------------------------------
 
     class Snapshot
     {
     public:
         //---------------------------------------------------------------------
-        Snapshot()
-        : m_frameBuffer()
+        Snapshot(Session session, std::optional<int> fps, std::optional<double> durationInSec)
+        : m_pAsyncTextureReadback()
         {
-            if (!s_pCaptureSession)
+            // WGC セッションを解決
+            const auto& pWGCSession = session.m_pWGCSession;
+            if (!pWGCSession)
             {
-                ayc::throw_runtime_error("Session not started. You should call `StartSession` before creating `Snapshot`.");
+                ayc::throw_runtime_error("m_pWGCSession == nullptr");
             }
-            m_frameBuffer = s_pCaptureSession->CopyFrameBuffer();
+            // フレームバッファの要求区間長を解決
+            const auto requestRawDurationInSec = [&]()
+            {
+                if (durationInSec.has_value())
+                {
+                    return std::max(
+                        durationInSec.value(),
+                        0.0
+                    );
+                }
+                else
+                {
+                    return std::numeric_limits<double>::max();
+                }
+            }();
+            // 生のフレームバッファを得る
+            const auto rawFrameBuffer = pWGCSession->CopyFrameBuffer(
+                requestRawDurationInSec
+            );
+            // 「ユーザー --> 生」のインデックスマップを解決
+            /* @note:
+                諸々の処理をした最終的なフレームバッファは、
+                ユーザー＝このライブラリの Caller が目にすることになる、
+                ってことでユーザーフレームバッファと命名。
+
+                VRAM からのダウンロードを非同期で行いたい都合で、
+                先にインデックスマップを解決する。
+
+                fps 指定がある場合は指定 fps でキャプチャしたかのように見えるように、
+                フレームの取捨選択を行う。
+            */
+            if (fps.has_value())
+            {
+                // 生フレームバッファの範囲（秒数）を解決
+                const auto [rawMinRelativesInSec, rawMaxRelativeInSec] = [&]()
+                    {
+                        auto [minIter, maxIter] = std::ranges::minmax_element
+                        (
+                            rawFrameBuffer,
+                            /*_Pr=*/{},
+                            [](auto const& x) { return x.relativeInSec; }
+                        );
+                        return std::make_pair(minIter->relativeInSec, maxIter->relativeInSec);
+                    }();
+                const auto rawDurationInSec = (
+                    rawMaxRelativeInSec - rawMinRelativesInSec
+                    );
+                // ユーザーフレームバッファの秒数を解決
+                const auto userDurationInSec = [&]()
+                {
+                    if (durationInSec.has_value())
+                    {
+                        return durationInSec.value();
+                    }
+                    else
+                    {
+                        return rawDurationInSec;
+                    }
+                }();
+                // ユーザーフレームバッファのフレーム数を解決
+                const auto numUserFrames = [&]()
+                {
+                    const auto fpsValue = static_cast<double>(fps.value());
+                    const auto result = std::round(userDurationInSec * fpsValue);
+                    return static_cast<std::size_t>(result);
+                }();
+                // マップを構築
+                {
+                    m_indexUserToRaw.clear();
+                    m_indexUserToRaw.reserve(numUserFrames);
+                    for (std::size_t i = 0; i < numUserFrames; ++i)
+                    {
+                        const auto rawObjRelativesInSec = (
+                            userDurationInSec * static_cast<double>(numUserFrames - i - 1) / static_cast<double>(numUserFrames)
+                        );
+                        const auto rawFrameIndex = rawFrameBuffer.GetFrameIndex(rawObjRelativesInSec);
+                        m_indexUserToRaw.push_back(rawFrameIndex);
+                    }
+                }
+            }
+            else
+            {
+                // @note: fps 指定が無い場合は恒等写像にする
+                m_indexUserToRaw.clear();
+                m_indexUserToRaw.reserve(rawFrameBuffer.GetSize());
+                for (std::size_t i = 0; i < rawFrameBuffer.GetSize(); ++i)
+                {
+                    m_indexUserToRaw.push_back(i);
+                }
+            }
+            // 非同期転送をスタート
+            {
+                // 実際に使われる生フレームのインデックスを解決
+                /* @note:
+                    fps 指定がある場合、フレーム間引きされる可能性がある。
+                    転送フレーム数を最小化したいので、必要フレームだけ選択的に転送する。
+                */
+                std::vector<std::size_t> reqIndices = m_indexUserToRaw;
+                {
+                    std::sort(reqIndices.begin(), reqIndices.end());
+                    reqIndices.erase(
+                        std::unique(reqIndices.begin(), reqIndices.end()),
+                        reqIndices.end()
+                    );
+                }
+                // 転送をスタート
+                /* @note:
+                    隙間を詰めるとインデックスの辻褄合わせがクソだるいので、
+                    不要なフレームを nullptr でフィルすることで間引きを表現する。
+                */
+                {
+                    std::vector<ayc::com_ptr<ID3D11Texture2D>> reqTextures;
+                    for (auto reqIndex : reqIndices)
+                    {
+                        reqTextures[reqIndex] = rawFrameBuffer[reqIndex];
+                    }
+                    m_pAsyncTextureReadback.reset(
+                        new AsyncTextureReadback(reqTextures)
+                    );
+                }
+            }
         }
 
         //---------------------------------------------------------------------
@@ -84,126 +256,38 @@ namespace
         //---------------------------------------------------------------------
         void Exit()
         {
-            m_frameBuffer.clear();
+            m_indexUserToRaw.clear();
+            m_pAsyncTextureReadback.reset();
         }
 
         //---------------------------------------------------------------------
-        std::size_t GetFrameIndexByTime(double timeInSec) const
+        std::size_t GetSize() const
         {
-            // １枚も無い場合はエラー
-            // @note: 普通は最低でも１枚はあるはず
-            if (m_frameBuffer.empty()) {
-                ayc::throw_runtime_error("No frames in snapshot.");
-            }
-            // 相対時刻が指定と最も近いフレームを線形探索
-            std::size_t bestIndex = 0;
-            {
-                double bestDiff = std::numeric_limits<double>::max();
-                for (std::size_t i = 0; i < m_frameBuffer.size(); ++i)
-                {
-                    double diff = std::abs(m_frameBuffer[i].timestamp - timeInSec);
-                    if (diff < bestDiff)
-                    {
-                        bestDiff = diff;
-                        bestIndex = i;
-                    }
-                }
-            }
-            return bestIndex;
+            return m_indexUserToRaw.size();
         }
 
         //---------------------------------------------------------------------
         py::tuple GetFrameBuffer(std::size_t frameIndex) const
         {
-            /* TODO
-                - 転送中は GIL 切れるらしい？
-                - アルファチャンネルいらない
-            */
-            // テクスチャを取得
-            const auto& srcTex = m_frameBuffer[frameIndex].texture;
-            if (!srcTex) {
-                ayc::throw_runtime_error("Texture is null.");
-            }
-            // テクスチャの desc を取得
-            D3D11_TEXTURE2D_DESC srcDesc{};
+            if (!m_pAsyncTextureReadback)
             {
-                srcTex->GetDesc(&srcDesc);
+                throw_runtime_error("m_pAsyncTextureReadback == nullptr");
             }
-            // 読み出し先テクスチャを生成
-            ayc::com_ptr<ID3D11Texture2D> stgTex;
+            if (frameIndex >= m_indexUserToRaw.size())
             {
-                // 記述
-                D3D11_TEXTURE2D_DESC stagingDesc = srcDesc;
-                {
-                    stagingDesc.Usage = D3D11_USAGE_STAGING;
-                    stagingDesc.BindFlags = 0;
-                    stagingDesc.CPUAccessFlags = D3D10_CPU_ACCESS_READ;
-                    stagingDesc.MiscFlags = 0;
-                }
-                // 生成
-                const HRESULT result = ayc::D3DDevice()->CreateTexture2D(
-                    &stagingDesc,
-                    nullptr,
-                    stgTex.put()
-                );
-                if (result != S_OK)
-                {
-                    ayc::throw_runtime_error("Failed to CreateTexture2D");
-                }
+                throw_runtime_error("frameIndex out of bounds.");
             }
-            // DEFAULT --> STATING
-            {
-                ayc::D3DContext()->CopyResource(stgTex.get(), srcTex.get());
-            }
-            // STAGING --> システムメモリ
-            std::string buffer;
-            {
-                // エイリアス
-                const UINT width = srcDesc.Width;
-                const UINT height = srcDesc.Height;
-                const size_t bytesPerPixel = 4;
-                const size_t rowSizeInBytes = width * bytesPerPixel;
-                const size_t bufferSizeInBytes = rowSizeInBytes * height;
-
-                // 読み出し先バッファーをリサイズ
-                {
-                    buffer.resize(bufferSizeInBytes);
-                }
-                // マップ
-                D3D11_MAPPED_SUBRESOURCE mapped{};
-                {
-                    const HRESULT result = ayc::D3DContext()->Map(stgTex.get(), 0, D3D11_MAP_READ, 0, &mapped);
-                    if (result != S_OK)
-                    {
-                        ayc::throw_runtime_error("Failed to Map");
-                    }
-                }
-                // コピー
-                auto pDstBegin = reinterpret_cast<std::uint8_t* const>(buffer.data());
-                const auto* pSrcBegin = static_cast<const std::uint8_t*>(mapped.pData);
-                for(UINT u=0; u<height; ++u)
-                {
-                    std::memcpy(
-                        pDstBegin + (u * rowSizeInBytes),
-                        pSrcBegin + (u * mapped.RowPitch),
-                        rowSizeInBytes
-                    );
-                }
-                // アンマップ
-                {
-                    ayc::D3DContext()->Unmap(stgTex.get(), 0);
-                }
-            }
-            // bytes に変換して終了
+            const auto result = (*m_pAsyncTextureReadback)[m_indexUserToRaw[frameIndex]];
             return py::make_tuple(
-                py::bytes(buffer),
-                static_cast<std::size_t>(srcDesc.Width),
-                static_cast<std::size_t>(srcDesc.Height)
+                result.width,
+                result.height,
+                result.textureBuffer
             );
         }
 
     private:
-        std::vector<ayc::CAPTURED_FRAME> m_frameBuffer;
+        std::vector<std::size_t> m_indexUserToRaw;
+        std::shared_ptr<AsyncTextureReadback> m_pAsyncTextureReadback;
     };
 }
 
@@ -215,45 +299,66 @@ PYBIND11_MODULE(_aynime_capture, m) {
 
     m.doc() = "Windows desktop capture library";
 
-    // StartSession
-    m.def(
-        "StartSession",
-        &StartSession,
-        py::arg("hwnd"),
-        py::arg("hold_in_sec"),
-        "Start or Restart the capture session."
-    );
+    // Session
+    py::class_<ayc::Session>(m, "Session", py::module_local())
+        .def(
+            py::init<uintptr_t, double>(),
+            py::arg("hwnd"),
+            py::arg("duration_in_sec"),
+            "Create a capture session for the specified window.\n\n"
+            "Args:\n"
+            "    hwnd: Target window handle (HWND cast to int).\n"
+            "    duration_in_sec: Seconds to keep frames in the buffer."
+        )
+        .def(
+            "Close",
+            &ayc::Session::Close,
+            "Stop the capture session immediately."
+        )
+        .def(
+            "GetFrameByTime",
+            &ayc::Session::GetFrameByTime,
+            py::arg("time_in_sec"),
+            "Return (width, height, frame_buffer) of the frame whose timestamp\n"
+            "is closest to time_in_sec seconds before the latest frame."
+        );
 
     // Snapshot
-    py::class_<Snapshot>(m, "Snapshot", py::module_local())
-        // コンストラクタ
+    py::class_<ayc::Snapshot>(m, "Snapshot", py::module_local())
         .def(
-            py::init<>(),
-            "Create a snapshot."
+            py::init<ayc::Session, std::optional<int>, std::optional<double>>(),
+            py::arg("session"),
+            py::arg("fps") = py::none(),
+            py::arg("duration_in_sec") = py::none(),
+            "Create a snapshot of the session's frame buffer.\n\n"
+            "Args:\n"
+            "    session: Source capture session.\n"
+            "    fps: Target frames per second, or None to use native frame timing.\n"
+            "    duration_in_sec: Time range (seconds) from the latest frame to include,\n"
+            "        or None to include all buffered frames."
         )
-        // with 句(enter)
         .def(
             "__enter__",
-            [](Snapshot& self) -> Snapshot* { return &self; },
+            [](ayc::Snapshot& self) -> ayc::Snapshot* { return &self; },
             py::return_value_policy::reference_internal
         )
-        // with 句(exit)
         .def(
             "__exit__",
-            [](Snapshot& snapshot, py::object, py::object, py::object) { snapshot.Exit(); return false; }
+            [](ayc::Snapshot& snapshot,
+                py::object, py::object, py::object) {
+                    snapshot.Exit();
+                    return false;
+            }
         )
-        // GetFrameIndexByTime
-        .def(
-            "GetFrameIndexByTime",
-            &Snapshot::GetFrameIndexByTime,
-            py::arg("time_in_sec"),
-            "Return frame index closest to the given relative time."
+        .def_property_readonly(
+            "size",
+            &ayc::Snapshot::GetSize,
+            "Number of frames in this snapshot."
         )
-        // GetFrameBuffer
         .def(
-            "GetFrameBuffer",
-            &Snapshot::GetFrameBuffer,
+            "GetFrame",
+            &ayc::Snapshot::GetFrameBuffer,
             py::arg("frame_index"),
-            "Return (frame_buffer, width, height) for the given index."
+            "Return (width, height, frame_buffer) for the given index."
         );
 }

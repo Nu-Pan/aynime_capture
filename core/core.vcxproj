@@ -11,7 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\async_texture_readback.cpp" />
     <ClCompile Include="source\core.cpp" />
+    <ClCompile Include="source\frame_buffer.cpp" />
     <ClCompile Include="source\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -21,6 +23,8 @@
     <ClCompile Include="source\wgc_system.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\async_texture_readback.h" />
+    <ClInclude Include="include\frame_buffer.h" />
     <ClInclude Include="include\stdafx.h" />
     <ClInclude Include="include\utils.h" />
     <ClInclude Include="include\wgc_session.h" />
@@ -111,7 +115,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
@@ -132,7 +136,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(PythonHome)Include;$(PythonHome)Lib\site-packages\pybind11\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>

@@ -17,13 +17,12 @@
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-ayc::CaptureSession::CaptureSession(HWND hwnd, double holdInSec)
-: m_framePool(nullptr)
+ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
+: m_isRunning(false)
+, m_framePool(nullptr)
 , m_revoker()
 , m_captureSession(nullptr)
-, m_guard()
-, m_holdInSec(holdInSec)
-, m_frameBuffer()
+, m_frameBuffer(holdInSec)
 {
     // キャプチャアイテム生成
     GraphicsCaptureItem captureItem{ nullptr };
@@ -53,7 +52,7 @@ ayc::CaptureSession::CaptureSession(HWND hwnd, double holdInSec)
     // ハンドラ登録
     m_revoker = m_framePool.FrameArrived(
         winrt::auto_revoke,
-        { this, &CaptureSession::OnFrameArrived }
+        { this, &WGCSession::OnFrameArrived }
     );
     // セッション生成
     m_captureSession = m_framePool.CreateCaptureSession(captureItem);
@@ -62,11 +61,25 @@ ayc::CaptureSession::CaptureSession(HWND hwnd, double holdInSec)
         m_captureSession.IsBorderRequired(false);
         m_captureSession.StartCapture();
     }
+    // ステート切り替え
+    {
+        m_isRunning = true;
+    }
 }
 
 //-----------------------------------------------------------------------------
-ayc::CaptureSession::~CaptureSession()
+ayc::WGCSession::~WGCSession()
 {
+    Close();
+}
+
+//-----------------------------------------------------------------------------
+void ayc::WGCSession::Close()
+{
+    // ステート切り替え
+    {
+        m_isRunning = false;
+    }
     // セッション終了
     if (m_captureSession)
     {
@@ -81,62 +94,43 @@ ayc::CaptureSession::~CaptureSession()
     {
         m_framePool.Close();
     }
-}
-
-//-----------------------------------------------------------------------------
-// バックバッファのコピーを得る
-std::vector<ayc::CAPTURED_FRAME> ayc::CaptureSession::CopyFrameBuffer() const
-{
-    // 「現在」を確定させる
-    const TimeSpan nowInTimeSpan = []() {
-        return NowFromQPC();
-    }();
-    // _RAW_CAPTURED_FRAME --> CAPTURED_FRAME
-    /* @note:
-        「TimeSpan 表現のタイムスタンプ」から「double 表現の現在時刻からの差分」に変換する。
-        ついでに、指定秒数を超えた過去のフレームはこの時点でカット。
-    */
-    std::vector<CAPTURED_FRAME> snapshot;
-    snapshot.reserve(m_frameBuffer.size());
+    // フレームバッファクリア
     {
-        // フレームバッファを触るので排他
-        std::scoped_lock<std::mutex> lock(m_guard);
-
-        // 素直にフレームバッファ全体を線形探索
-        for(const auto& source : m_frameBuffer)
-        {
-            const double sourceRelativeInSec = toDurationInSec(nowInTimeSpan, source.timeStampInTimeSpan);
-            if (sourceRelativeInSec > m_holdInSec)
-            {
-                continue;
-            }
-            snapshot.emplace_back(
-                CAPTURED_FRAME{ source.texture, sourceRelativeInSec }
-            );
-        }
-        // 最低１枚はスナップショットに含める
-        if (snapshot.empty() && !m_frameBuffer.empty())
-        {
-            const auto source = m_frameBuffer.back();
-            snapshot.emplace_back(
-                CAPTURED_FRAME{
-                    source.texture,
-                    toDurationInSec(nowInTimeSpan, source.timeStampInTimeSpan)
-                }
-            );
-        }
+        m_frameBuffer.Clear();
     }
-    return snapshot;
 }
 
 //-----------------------------------------------------------------------------
-void ayc::CaptureSession::OnFrameArrived(
+ayc::com_ptr<ID3D11Texture2D> ayc::WGCSession::CopyFrame(double relativeInSec) const
+{
+    if (!m_isRunning)
+    {
+        throw_runtime_error("CaptureSession has not initialized");
+    }
+    return m_frameBuffer.GetFrame(relativeInSec);
+}
+
+//-----------------------------------------------------------------------------
+ayc::FreezedFrameBuffer ayc::WGCSession::CopyFrameBuffer(double durationInSec)
+{
+    if (!m_isRunning)
+    {
+        throw_runtime_error("CaptureSession has not initialized");
+    }
+    return FreezedFrameBuffer(
+        m_frameBuffer,
+        durationInSec
+    );
+}
+
+//-----------------------------------------------------------------------------
+void ayc::WGCSession::OnFrameArrived(
     const Direct3D11CaptureFramePool& sender,
     const WinRTIInspectable& args
 )
 {
     // 「現在」を確定させる
-    const TimeSpan nowInTimeSpan = []() {
+    const TimeSpan nowInTS = []() {
         return NowFromQPC();
     }();
     // フレームを取得
@@ -200,35 +194,6 @@ void ayc::CaptureSession::OnFrameArrived(
     }
     // フレームバッファに詰める
     {
-        // フレームバッファ触るので排他
-        std::scoped_lock<std::mutex> lock(m_guard);
-
-        // フレームをバッファに追加
-        if (fbTex)
-        {
-            m_frameBuffer.emplace_back(
-                _RAW_CAPTURED_FRAME{ fbTex, frame.SystemRelativeTime() }
-            );
-        }
-        // 賞味期限切れのフレームをバッファから除外
-        /* @note:
-            必ず何某かのフレームが１つは返るようにしたいので、１フレームは残す。
-        */
-        for (;;)
-        {
-            if (m_frameBuffer.size() <= 1)
-            {
-                break;
-            }
-            const double frontRelativeInSec = toDurationInSec(
-                nowInTimeSpan,
-                m_frameBuffer.front().timeStampInTimeSpan
-            );
-            if (frontRelativeInSec <= m_holdInSec)
-            {
-                break;
-            }
-            m_frameBuffer.pop_front();
-        }
+        m_frameBuffer.PushFrame(fbTex, frame.SystemRelativeTime());
     }
 }

@@ -1,6 +1,6 @@
-from ._aynime_capture import StartSession, Snapshot
+from ._aynime_capture import Session, Snapshot
 
 __all__ = [
-    "StartSession",
-    "Snapshot"
+    "Session",
+    "Snapshot",
 ]

@@ -10,10 +10,10 @@
 - vscode 上での開発は想定しない
 
 # AI エージェント行動原則
-- ファイルの編集操作は一切禁止です
-- ソースコードの編集等はすべて人間が行います
+- AI エージェントによるファイルの編集操作は一切禁止です
+- ソースコードの編集等はすべてユーザーが行います
 - AI エージェントは Read-Only なコマンドのみ実行が許可されます
-- 人間が問題を解決できるよう、チャット上で提案を行ってください
+- ユーザーが問題を解決できるよう、チャット上で提案を行ってください
 
 # ライブラリの要件・仕様
 
@@ -36,84 +36,130 @@
     - バッファリングを可能な限り「源流」側で留める（アプリからの要求が来るまでメインメモリへの転送を行わない）
 
 ## ライブラリの基本的な API
-- 関数 `StartSession(hwnd, duration_in_sec)`
+- クラス `Session`
+    - キャプチャセッションを表すクラス
+    - このクラスが存命である間、ライブラリ内のバックグラウンドスレッド上で非同期にキャプチャが実行され続ける
+    - `with` 句は前提とせず、 `__init__` から `Close` までのライフサイクルを前提とする
+- コンストラクタ `Session.__init__(hwnd: int, duration_in_sec: float)`
     - キャプチャセッションを開始する
     - セッションは指定されたウィンドウ(`hwnd`)を、バックグラウンドでキャプチャし続ける
     - 過去 `duration_in_sec` 秒間のキャプチャ結果がバッファリングされる
-    - キャプチャ・バッファリングはライブラリ内のスレッド上で並列に行われる
-    - すでに有効なセッションが存在する場合、新しい `StartSession` の呼び出しで挙動が上書きされる
+- デストラクタ `Session.__del__(self)`
+    - キャプチャセッションを停止する
+    - プロセス終了時のケースはこちら
+- 関数 `Session.Close(self) -> None`
+    - キャプチャセッションを停止する
+    - python の GC に任せずに、任意タイミングでセッションを即時停止したい場合に呼び出す
+    - セッション再生成のケースはこちら
+- 関数 `Session.GetFrameByTime(self, time_in_sec: float) -> tuple[int, int, bytes]`
+    - 単一フレームを取得するための API
+    - セッションのフレームバッファ上、タイムスタンプが `time_in_sec` と最も近いフレームを返す
+    - `time_in_sec` は最新フレームからの相対的な秒数で float 値
+    - たとえば、 0.1 を指定したら、 0.1 秒前のフレームが返って来る
+    - 戻り値は `(Width, Height, Frame Raw Buffer)`
 - クラス `Snapshot`
+    - 時間的に連続する複数フレームを一括して取得するためのクラス
     - ある一瞬におけるバックバッファのスナップショットを表す
     - 一度生成された `Snapshot` は不変（バックグラウンドのキャプチャの影響を受けない）
-    - with 句での利用を前提とする
-- 関数 `Snapshot.GetFrameIndexByTime(time_in_sec)`
-    - スナップショット上、タイムスタンプが `time_in_sec` と最も近いフレームのインデックス値を返す
-    - `time_in_sec` は最新フレームからの相対的な秒数で float 値
-    - たとえば、 0.1 を指定したら、 0.1 秒前のフレームのインデックス値が返ってくる
-    - フレームインデックスは最新が 0 で、大きい数字＝過去
-- 関数 `Snapshot.GetFrameBuffer(frame_index)`
-    - スナップショット上の `frame_index` 番目のフレームのメモリイメージを返す
-    - アプリ側でメモリーバッファーから PIL へ変換されることを前提とする
-    - `GetFrameBuffer` 内で VRAM --> メインメモリ転送が行われるため、多少のブロッキングが発生する
+    - `Snapshot` よりも先に生成元 `Session` が破棄されても良い
+    - `with` 句での利用を前提とする
+- コンストラクタ `Snapshot.__init__(self, session: Session, fps: int|None, duration_in_sec: float|None)`
+    - コンストラクタが呼び出された時点での、 `session` のフレームバッファのスナップショットを撮る
+    - コンストラクタの時点で「 GPU リソースから bytes への非同期転送処理」がスタートする
+    - `duration_in_sec` が `None` の場合
+        - 全フレームがスナップショット対象となる
+    - `duration_in_sec` が `float` の場合
+        - 過去 `duration_in_sec` 秒以内がスナップショット対象となる
+    - `fps` が `None` の場合
+        - `Windows.Graphics.Capture` から渡されたフレーム列をそのまま返す
+        - 画面の更新発生時に動的に通知されたフレームそのままなため、フレームレートという概念は存在しない
+    - `fps` が `int` の場合
+        - 秒間 `fps` の連番静止画に見えるように内部でフレームが取捨選択される
+        - 生フレーム列の方が優速なら間引きされるし、 `fps` の方が優速なら同一フレームが連続する
+- プロパティ `Snapshot.size: int`
+    - プロパティメソッド
+    - スナップショット上のフレーム枚数を返す
+- 関数 `Snapshot.GetFrame(frame_index) -> tuple[int, int, bytes]`
+    - スナップショット上の `frame_index` 番目のフレームを返す
+    - 内部で行われている非同期転送処理が完了するまでブロッキングする
+    - 戻り値は関数 `Session.GetFrameByTime` と同様
 
 ## サンプルコード（スチルキャプチャ）
 ```python
-import aynime_capture as ayn
+import aynime_capture as ayc
 from time import sleep
 
 hwnd = ... # 別の方法でウィンドウは指定される
 
-ayn.StartSession(hwnd, 3)
+# セッション開始
+session = ayc.Session(hwnd, 3.0)
 
 # バックバッファが溜まるのを待つ
-sleep(4)
+sleep(5)
 
-# スナップショット経由で取得
-with Snapshot() as s:
-    still_index = s.GetFrameIndexByTime(0.1)
-    still_image = s.GetFrameBuffer(still_index)
+# 時刻指定で単一フレームを取得
+width, height, frame_bytes = session.GetFrameByTime(0.1)
 
-# still_image を使って何かする
-...
+# PIL 画像化
+pil_image = Image.frombuffer(
+    "RGBA",
+    (width, height),
+    frame_bytes,
+    "raw",
+    "BGRA",
+    0,
+    1
+)
 
+... # still_image を使って何かする
+
+# セッション停止
+session.Close()
 ```
 
 ## サンプルコード（アニメキャプチャ）
 ```python
-import aynime_capture as ayn
+import aynime_capture as ayc
 from time import sleep
 
 hwnd = ... # 別の方法でウィンドウは指定される
 
-ayn.StartSession(hwnd, 3)
+# セッション開始
+session = ayc.Session(hwnd, 3.0)
 
 # バックバッファが溜まるのを待つ
-sleep(4)
+sleep(5)
 
-# スナップショット経由で取得
-with Snapshot() as s:
-    oldest_index = s.GetFrameIndexByTime(3.0)
-    anim_images = [
-        s.GetFrameBuffer(i)
-        for i in range(oldest_index + 1)
-    ]
+# スナップショットからフレームを取得
+with ayc.Snapshot(session, 25, 3.0) as snapshot:
+    for frame_index in range(snapshot.size):
+        width, height, frame_bytes = snapshot.GetFrame(frame_index)
+        pil_image = Image.frombuffer(
+            "RGBA",
+            (width, height),
+            frame_bytes,
+            "raw",
+            "BGRA",
+            0,
+            1
+        )
+        ... # still_image を使って何かする
 
-# anim_images を使って何かする
-...
-
+# セッション停止
+session.Close()
 ```
 
 # ディレクトリ構成
 
-## `aynime_capture`
+## `aynime_capture/`
 - python パッケージ公開 API 定義用
 - Visual Studio 環境からは使わない
 
-## `core`
+## `core/`
 - ライブラリ本体
 - C++ プロジェクト
 
-## `text.py`
+## `test/`
 - ライブラリの動作確認用
 - python プロジェクト
 

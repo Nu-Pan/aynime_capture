@@ -1,21 +1,38 @@
 # aynime_capture/__init__.pyi
 
-from typing import Tuple
+from typing import Optional
 
-def StartSession(hwnd: int, hold_in_sec: float) -> None:
-    """Start the capture session.
+class Session:
+    """Capture session.
 
-    指定されたウィンドウのキャプチャセッションを開始し、
-    過去 hold_in_sec 秒間のフレームをバックグラウンドで保持します。
-
-    Args:
-        hwnd: キャプチャ対象ウィンドウの HWND を int にキャストしたもの。
-        hold_in_sec: バッファ上に保持する秒数。
-
-    Raises:
-        RuntimeError: キャプチャ初期化に失敗した場合。
+    このクラスのインスタンスが存命の間、
+    バックグラウンドスレッド上でキャプチャが継続して実行されます。
     """
-    ...
+
+    def __init__(self, hwnd: int, duration_in_sec: float) -> None:
+        """キャプチャセッションを開始する。
+
+        Args:
+            hwnd: キャプチャ対象ウィンドウの HWND を int にキャストしたもの。
+            duration_in_sec: バッファ上に保持する秒数。
+        """
+        ...
+
+    def Close(self) -> None:
+        """キャプチャセッションを停止する。"""
+        ...
+
+    def GetFrameByTime(self, time_in_sec: float) -> tuple[int, int, bytes]:
+        """指定した相対時刻に最も近いフレームを取得する。
+
+        Args:
+            time_in_sec: 最新フレームからの相対秒数 (例: 0.1)。
+
+        Returns:
+            (Width, Height, Frame Raw Buffer) のタプル。
+        """
+        ...
+
 
 class Snapshot:
     """A snapshot of the capture buffer.
@@ -24,26 +41,32 @@ class Snapshot:
     バックグラウンドのキャプチャ処理の影響を受けません。
     """
 
+    def __init__(
+        self,
+        session: Session,
+        fps: Optional[int] = ...,
+        duration_in_sec: Optional[float] = ...,
+    ) -> None:
+        """セッションのフレームバッファのスナップショットを取得する。"""
+        ...
+
     def __enter__(self) -> "Snapshot":
-        """Enter the context manager."""
+        """コンテキストマネージャ開始。"""
         ...
 
     def __exit__(self, exc_type, exc, tb) -> bool:
-        """Exit the context manager."""
+        """コンテキストマネージャ終了。"""
         ...
 
-    def GetFrameIndexByTime(self, time_in_sec: float) -> int:
-        """Get frame index closest to the given relative time.
-
-        Args:
-            time_in_sec: 最新フレームからの相対秒数（0.1 など）。
-        """
+    @property
+    def size(self) -> int:
+        """スナップショット上のフレーム枚数。"""
         ...
 
-    def GetFrameBuffer(self, frame_index: int) -> tuple[bytes, int, int]:
-        """Get frame buffer for the given index.
+    def GetFrame(self, frame_index: int) -> tuple[int, int, bytes]:
+        """指定インデックスのフレームを取得する。
 
         Returns:
-            (フレームの raw bytes, 幅, 高さ) のタプル。
+            (Width, Height, Frame Raw Buffer) のタプル。
         """
         ...

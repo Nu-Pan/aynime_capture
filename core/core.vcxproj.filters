@@ -26,6 +26,12 @@
     <ClCompile Include="source\wgc_system.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="source\frame_buffer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\async_texture_readback.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\stdafx.h">
@@ -38,6 +44,12 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\wgc_system.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\frame_buffer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\async_texture_readback.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

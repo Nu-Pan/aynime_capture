@@ -1,39 +1,42 @@
 #pragma once
 
+#include "frame_buffer.h"
+
 namespace ayc
 {
-	// キャプチャされたフレーム１枚を表す構造体
-	struct CAPTURED_FRAME
-	{
-		com_ptr<ID3D11Texture2D> texture;
-		double timestamp;
-	};
-
-	class CaptureSession
+	class WGCSession
 	{
 	public:
 		// コンストラクタ
-		CaptureSession(HWND hwnd, double holdInSec);
+		WGCSession(HWND hwnd, double holdInSec);
 
 		// デストラクタ
-		~CaptureSession();
+		~WGCSession();
+
+		// セッションを停止
+		void Close();
+
+		// 単一フレームのコピーを得る
+		com_ptr<ID3D11Texture2D> CopyFrame(double relativeInSec) const;
 
 		// バックバッファのコピー（スナップショット）を得る
-		std::vector<CAPTURED_FRAME> CopyFrameBuffer() const;
+		FreezedFrameBuffer CopyFrameBuffer(double durationInSec);
+
+		// バックバッファ保持秒数を取得
+		double GetHoldInSec() const
+		{
+			return m_holdInSec;
+		}
 
 	private:
-		// CaptureSession が内部的に保持するフレーム情報
-		struct _RAW_CAPTURED_FRAME
-		{
-			com_ptr<ID3D11Texture2D> texture;
-			TimeSpan timeStampInTimeSpan;
-		};
-
 		// フレーム到着ハンドラ
 		void OnFrameArrived(
 			const Direct3D11CaptureFramePool& sender,
 			const WinRTIInspectable& args
 		);
+
+		// Status
+		bool	m_isRunning;
 
 		// WinRT Objects
 		Direct3D11CaptureFramePool	m_framePool;
@@ -41,8 +44,7 @@ namespace ayc
 		GraphicsCaptureSession		m_captureSession;
 
 		// Frame Buffers
-		mutable std::mutex				m_guard;
-		double							m_holdInSec;
-		std::deque<_RAW_CAPTURED_FRAME>	m_frameBuffer;
+		double				m_holdInSec;
+		FrameBuffer			m_frameBuffer;
 	};
 }

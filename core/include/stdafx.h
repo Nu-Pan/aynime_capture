@@ -31,6 +31,9 @@
 #include <vector>
 #include <string>
 #include <atomic>
+#include <algorithm>
+#include <ranges>
+#include <future>
 
 // Type Alias
 namespace ayc
@@ -67,3 +70,6 @@ namespace ayc
 	// WindowsSDK  D3D11
 	using Windows::Graphics::DirectX::Direct3D11::IDirect3DDxgiInterfaceAccess;
 }
+
+namespace py = pybind11;
+
