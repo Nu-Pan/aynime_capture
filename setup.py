@@ -6,11 +6,13 @@ ext_modules = [
     Pybind11Extension(
         "aynime_capture._aynime_capture",
         [
+            "core/source/async_texture_readback.cpp",
             "core/source/core.cpp",
-            "core/source/utils.cpp",
+            "core/source/frame_buffer.cpp",
             "core/source/stdafx.cpp",
-            "core/source/wgc_system.cpp",
-            "core/source/wgc_session.cpp"
+            "core/source/utils.cpp",
+            "core/source/wgc_session.cpp",
+            "core/source/wgc_system.cpp"
         ],
         include_dirs=[
             "core/include"
@@ -20,8 +22,8 @@ ext_modules = [
             "dxgi",
             "WindowsApp"
         ],
+        cxx_std=20,
         extra_compile_args=[
-            "/std:c++17",
             "/EHsc"
         ]
     )
