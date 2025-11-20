@@ -238,7 +238,9 @@ namespace ayc
                     不要なフレームを nullptr でフィルすることで間引きを表現する。
                 */
                 {
-                    std::vector<ayc::com_ptr<ID3D11Texture2D>> reqTextures;
+                    std::vector<ayc::com_ptr<ID3D11Texture2D>> reqTextures(
+                        rawFrameBuffer.GetSize()
+                    );
                     for (auto reqIndex : reqIndices)
                     {
                         reqTextures[reqIndex] = rawFrameBuffer[reqIndex];
@@ -281,7 +283,7 @@ namespace ayc
             return py::make_tuple(
                 result.width,
                 result.height,
-                result.textureBuffer
+                py::bytes(result.textureBuffer)
             );
         }
 

@@ -80,13 +80,14 @@ void ayc::ReadbackTexture(
             }
         }
         // ÉRÉsÅ[
+        outBuffer.resize(bufferSizeInBytes);
         auto const pDstBegin = reinterpret_cast<std::uint8_t*>(outBuffer.data());
         const auto* pSrcBegin = static_cast<const std::uint8_t*>(mapped.pData);
-        for (UINT u = 0; u < height; ++u)
+        for (UINT v = 0; v < height; ++v)
         {
             std::memcpy(
-                pDstBegin + (u * rowSizeInBytes),
-                pSrcBegin + (u * mapped.RowPitch),
+                pDstBegin + (v * rowSizeInBytes),
+                pSrcBegin + (v * mapped.RowPitch),
                 rowSizeInBytes
             );
         }

@@ -83,28 +83,32 @@ if hwnd is None:
 
 # セッションをスタート
 print(f"hwnd = {hwnd}")
-ayc.StartSession(hwnd, 3.0)
+session = ayc.Session(hwnd, 3.0)
 
-time.sleep(1.0)
+# バッファに溜まるのを待つ
+print("---- バッファが溜まるのを待ちます")
+time.sleep(3.0)
 
-# バックバッファが溜まるのを待つ
-# DEBUG 一旦無限ループにしてる
-while True:
-    with ayc.Snapshot() as snapshot:
-        frame_index = snapshot.GetFrameIndexByTime(0.1)
-        frame_buffer, width, height = snapshot.GetFrameBuffer(frame_index)
-        print(f'frame_index = {frame_index}')
-        print(f'width = {width}')
-        print(f'height = {height}')
-        # print(frame_buffer)
+# Session からの画像取得をテスト
+print("---- from Session")
+for _ in range(3):
+    width, height, frame_buffer = session.GetFrameByTime(0.1)
+    print(f'width = {width}')
+    print(f'height = {height}')
+    print(f'frame_buffer = {id(frame_buffer)}')
+    time.sleep(1.0)
+
+# Snapshot からの画像取得をテスト
+print("---- from Snapshot")
+for _ in range(3):
+    with ayc.Snapshot(session, None, None) as snapshot:
+        for frame_index in range(snapshot.size):
+            width, height, frame_buffer = snapshot.GetFrame(frame_index)
+            print(f'frame_index = {frame_index}')
+            print(f'width = {width}')
+            print(f'height = {height}')
+            print(f'frame_buffer = {id(frame_buffer)}')
         time.sleep(1.0)
 
-# try:
-#     with ayc.Snapshot() as s:
-#         # Either name works; both raise NotImplementedError in skeleton
-#         idx = s.GetFrameIndexByTime(0.1)
-#         # idx = s.GetFrameIndexBytTime(0.1)  # alias supported
-#         buf = s.GetFrameBuffer(idx)
-#         # buf = s.GetFrame(idx)  # alias supported
-# except NotImplementedError:
-#     print("Snapshot methods: not implemented yet (expected for skeleton)")
+# セッションを明示的に終了
+session.Close()
