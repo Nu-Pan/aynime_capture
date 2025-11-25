@@ -27,7 +27,7 @@ void ayc::ReadbackTexture(
     // nullptr チェック
     if (!pSourceTexture)
     {
-        throw_runtime_error("Failed to CreateTexture2D");
+        throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("NO Source Texture", pSourceTexture);
     }
     // テクスチャの desc を取得
     D3D11_TEXTURE2D_DESC srcDesc{};
@@ -53,7 +53,7 @@ void ayc::ReadbackTexture(
         );
         if (result != S_OK)
         {
-            throw_runtime_error("Failed to CreateTexture2D");
+            throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to ID3D11Device::CreateTexture2D", result);
         }
     }
     // DEFAULT --> STATING
@@ -76,7 +76,7 @@ void ayc::ReadbackTexture(
             const HRESULT result = D3DContext()->Map(stgTex.get(), 0, D3D11_MAP_READ, 0, &mapped);
             if (result != S_OK)
             {
-                throw_runtime_error("Failed to Map");
+                throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to ID3D11DeviceContext::Map", result);
             }
         }
         // コピー
@@ -145,12 +145,12 @@ const ayc::AsyncTextureReadback::RESULT& ayc::AsyncTextureReadback::operator[](s
     // エラーチェック
     if (index >= m_jobs.size())
     {
-        throw_runtime_error("index out of range");
+        throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("Index Out of Range", index);
     }
     const auto& job = m_jobs[index];
     if (!job.pSourceTexture)
     {
-        throw_runtime_error("skipped frame");
+        throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("Skipped Frame", index);
     }
     // 転送終了を待機する
     {

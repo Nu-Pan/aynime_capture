@@ -59,7 +59,7 @@ ayc::FrameBuffer::FrameBuffer(double holdInSec)
 	// ï€éùïbêîÇÕê≥ílÇ∂Ç·Ç»Ç¢Ç∆É_ÉÅ
 	if (holdInSec <= 0.0)
 	{
-		ayc::throw_runtime_error("holdInSec must be a positive value.");
+		throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("holdInSec must be semi-positive", holdInSec);
 	}
 }
 
@@ -116,7 +116,7 @@ ayc::com_ptr<ID3D11Texture2D> ayc::FrameBuffer::GetFrame(double relativeInSec) c
 		std::scoped_lock<std::mutex> lock(m_guard);
 		if (m_impl.empty())
 		{
-			throw_runtime_error("Failed to GetFrame(FrameBuffer is empty)");
+			throw MAKE_GENERAL_ERROR("FrameBuffer is Empty");
 		}
 		result = *_FindMinElement(
 			m_impl.cbegin(),

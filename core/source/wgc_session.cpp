@@ -35,11 +35,11 @@ ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
         );
         if (result != S_OK)
         {
-            ayc::throw_runtime_error("Failed to CreateForWindow");
+            throw MAKE_GENERAL_ERROR_FROM_HRESULT("Faield to CreateForWindow", result);
         }
         if (!captureItem)
         {
-            ayc::throw_runtime_error("GraphicsCaptureItem == nullptr");
+            throw MAKE_GENERAL_ERROR("captureItem is Invalid");
         }
     }
     // フレームプール生成
@@ -105,7 +105,7 @@ ayc::com_ptr<ID3D11Texture2D> ayc::WGCSession::CopyFrame(double relativeInSec) c
 {
     if (!m_isRunning)
     {
-        throw_runtime_error("CaptureSession has not initialized");
+        throw MAKE_GENERAL_ERROR("WGCSession not initialized");
     }
     return m_frameBuffer.GetFrame(relativeInSec);
 }
@@ -115,7 +115,7 @@ ayc::FreezedFrameBuffer ayc::WGCSession::CopyFrameBuffer(double durationInSec)
 {
     if (!m_isRunning)
     {
-        throw_runtime_error("CaptureSession has not initialized");
+        throw MAKE_GENERAL_ERROR("WGCSession not initialized");
     }
     return FreezedFrameBuffer(
         m_frameBuffer,
@@ -163,7 +163,7 @@ void ayc::WGCSession::OnFrameArrived(
         );
         if (result != S_OK)
         {
-            ayc::throw_runtime_error("Failed to GetInterface");
+            throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to GetInterface", result);
         }
     }
     // フレームバッファ用にテクスチャのコピーを取る
@@ -184,7 +184,7 @@ void ayc::WGCSession::OnFrameArrived(
             );
             if (result != S_OK)
             {
-                ayc::throw_runtime_error("Failed to CreateTexture2D");
+                throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateTexture2D", result);
             }
         }
         // コピー

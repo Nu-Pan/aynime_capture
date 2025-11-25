@@ -35,6 +35,9 @@
 #include <algorithm>
 #include <ranges>
 #include <future>
+#include <stacktrace>
+#include <stdexcept>
+#include <sstream>
 
 // Type Alias
 namespace ayc

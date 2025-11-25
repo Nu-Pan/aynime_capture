@@ -81,12 +81,13 @@ namespace ayc
             // セッションが停止済みならエラー
             if (!m_pWGCSession)
             {
-                ayc::throw_runtime_error("m_pWGCSession == nullptr");
+                throw MAKE_GENERAL_ERROR("Session Already Stopped");
             }
             // テクスチャを取得
             const auto& srcTex = m_pWGCSession->CopyFrame(timeInSec);
-            if (!srcTex) {
-                ayc::throw_runtime_error("Texture is null.");
+            if (!srcTex)
+            {
+                throw MAKE_GENERAL_ERROR("Failed to ayc::WGCSession::CopyFrame");
             }
             // テクスチャを読み出し
             std::size_t width;
@@ -125,7 +126,7 @@ namespace ayc
             const auto& pWGCSession = session.m_pWGCSession;
             if (!pWGCSession)
             {
-                ayc::throw_runtime_error("m_pWGCSession == nullptr");
+                throw MAKE_GENERAL_ERROR("Session Already Stopped");
             }
             // フレームバッファの要求区間長を解決
             const auto requestRawDurationInSec = [&]()
@@ -273,11 +274,11 @@ namespace ayc
         {
             if (!m_pAsyncTextureReadback)
             {
-                throw_runtime_error("m_pAsyncTextureReadback == nullptr");
+                throw MAKE_GENERAL_ERROR("Snapshot Already Destructed");
             }
             if (frameIndex >= m_indexUserToRaw.size())
             {
-                throw_runtime_error("frameIndex out of bounds.");
+                throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("frameIndex Out of Bounds.", frameIndex);
             }
             const auto result = (*m_pAsyncTextureReadback)[m_indexUserToRaw[frameIndex]];
             return py::make_tuple(
@@ -300,6 +301,48 @@ namespace ayc
 PYBIND11_MODULE(_aynime_capture, m) {
 
     m.doc() = "Windows desktop capture library";
+
+    // Exception Conversion
+    py::register_exception_translator(
+        [](std::exception_ptr p)
+        {
+            try
+            {
+                if (p)
+                {
+                    std::rethrow_exception(p);
+                }
+            }
+            catch (const py::error_already_set&)
+            {
+                // Python 例外の場合はシンプルに再送
+                throw;
+            }
+            catch (const ayc::GeneralError& e)
+            {
+                // GeneralError なら Python 例外に変換して再送
+                ayc::ThrowGeneralErrorAsPython(e);
+            }
+            catch (const std::exception& e)
+            {
+                ayc::ThrowGeneralErrorAsPython(
+                    MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION("Unhandled C++ Exception", e)
+                );
+            }
+            catch (const winrt::hresult_error& e)
+            {
+                ayc::ThrowGeneralErrorAsPython(
+                    MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION("Unhandled WinRT Exception", e)
+                );
+            }
+            catch (...)
+            {
+                ayc::ThrowGeneralErrorAsPython(
+                    MAKE_GENERAL_ERROR("Unhandled Unknown Exception", e)
+                );
+            }
+        }
+    );
 
     // Session
     py::class_<ayc::Session>(m, "Session", py::module_local())

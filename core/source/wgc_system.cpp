@@ -41,9 +41,9 @@ void ayc::Initialize()
         {
             winrt::init_apartment(winrt::apartment_type::single_threaded);
         }
-        catch (...)
+        catch (const winrt::hresult_error& e)
         {
-            ayc::throw_runtime_error("Initialize(): init_apartment() failed (COM apartment conflict?)");
+            throw MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION("Failed to init_apartment (COM apartment confliction ?)", e);
         }
     }
 
@@ -51,7 +51,7 @@ void ayc::Initialize()
     if (!GraphicsCaptureSession::IsSupported())
     {
         Finalize();
-        ayc::throw_runtime_error("GraphicsCaptureSession is not supported.");
+        throw MAKE_GENERAL_ERROR("GraphicsCaptureSession is not Supported.");
     }
 
     // D3D11 デバイス生成
@@ -82,7 +82,7 @@ void ayc::Initialize()
         if (result != S_OK)
         {
             Finalize();
-            ayc::throw_runtime_error("Failed to D3D11CreateDevice.");
+            throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to D3D11CreateDevice.", result);
         }
     }
     // WinRT デバイス生成
@@ -95,7 +95,7 @@ void ayc::Initialize()
         if (result != S_OK)
         {
             Finalize();
-            ayc::throw_runtime_error("Failed to CreateDirect3D11DeviceFromDXGIDevice.");
+            throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateDirect3D11DeviceFromDXGIDevice.", result);
         }
     }
 }
@@ -115,14 +115,14 @@ void ayc::Finalize()
 }
 
 //-----------------------------------------------------------------------------
-// D3D 11 Device
+// D3D11 Device
 const ayc::com_ptr<ID3D11Device>& ayc::D3DDevice()
 {
     return s_d3dDevice;
 }
 
 //-----------------------------------------------------------------------------
-// D3D 11 Device Context
+// D3D11 Device Context
 const ayc::com_ptr<ID3D11DeviceContext>& ayc::D3DContext()
 {
     return s_d3dContext;
