@@ -22,9 +22,9 @@ ext_modules = [
             "dxgi",
             "WindowsApp"
         ],
-        cxx_std=20,
         extra_compile_args=[
-            "/EHsc"
+            "/EHsc",
+            "/std:c++latest"
         ]
     )
 ]
