@@ -77,12 +77,9 @@ def pick_window_hwnd(prefer_keywords: tuple[str]) -> tuple[Optional[int], Option
 
 
 # # ウィンドウをピックする
-# hwnd, title = pick_window_hwnd(prefer_keywords=("chrome",))
-# if hwnd is None:
-#     raise RuntimeError("対象ウィンドウが見つかりませんでした。ブラウザ等を起動してください。")
-
-# DEBUG
-hwnd, title = pick_window_hwnd(prefer_keywords=("JoyToKey",))
+hwnd, title = pick_window_hwnd(prefer_keywords=("chrome",))
+if hwnd is None:
+    raise RuntimeError("対象ウィンドウが見つかりませんでした。ブラウザ等を起動してください。")
 
 # セッションをスタート
 print(f"hwnd = {hwnd}")

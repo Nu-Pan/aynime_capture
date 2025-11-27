@@ -165,9 +165,8 @@ ayc::FreezedFrameBuffer::FreezedFrameBuffer(
 		Ç±Ç±Ç≈Ç‡ç≈í·Ç≈Ç‡ÇPÉtÉåÅ[ÉÄÇÕï‘Ç∑ÅB
 	*/
 	{
-		auto& srcGuard = frameBuffer.m_guard;
+		std::scoped_lock<std::mutex> lock(frameBuffer.m_guard);
 		auto& srcImpl = frameBuffer.m_impl;
-		std::scoped_lock<std::mutex> lock(srcGuard);
 		m_impl.reserve(srcImpl.size());
 		for (const auto& frame : srcImpl)
 		{
