@@ -102,7 +102,7 @@ for _ in range(3):
 # Snapshot からの画像取得をテスト
 print("---- from Snapshot")
 for _ in range(3):
-    with ayc.Snapshot(session, None, None) as snapshot:
+    with ayc.Snapshot(session, 23.976, None) as snapshot:
         for frame_index in range(snapshot.size):
             width, height, frame_buffer = snapshot.GetFrame(frame_index)
             print(f'frame_index = {frame_index}')

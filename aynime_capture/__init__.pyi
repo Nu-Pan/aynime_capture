@@ -44,7 +44,7 @@ class Snapshot:
     def __init__(
         self,
         session: Session,
-        fps: Optional[int] = ...,
+        fps: Optional[float] = ...,
         duration_in_sec: Optional[float] = ...,
     ) -> None:
         """セッションのフレームバッファのスナップショットを取得する。"""

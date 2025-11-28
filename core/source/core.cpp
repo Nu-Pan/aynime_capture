@@ -119,7 +119,7 @@ namespace ayc
     {
     public:
         //---------------------------------------------------------------------
-        Snapshot(Session session, std::optional<int> fps, std::optional<double> durationInSec)
+        Snapshot(Session session, std::optional<double> fps, std::optional<double> durationInSec)
         : m_pAsyncTextureReadback()
         {
             // WGC セッションを解決
@@ -190,7 +190,7 @@ namespace ayc
                 // ユーザーフレームバッファのフレーム数を解決
                 const auto numUserFrames = [&]()
                 {
-                    const auto fpsValue = static_cast<double>(fps.value());
+                    const auto fpsValue = fps.value();
                     const auto result = std::round(userDurationInSec * fpsValue);
                     return static_cast<std::size_t>(result);
                 }();
@@ -371,7 +371,7 @@ PYBIND11_MODULE(_aynime_capture, m) {
     // Snapshot
     py::class_<ayc::Snapshot>(m, "Snapshot", py::module_local())
         .def(
-            py::init<ayc::Session, std::optional<int>, std::optional<double>>(),
+            py::init<ayc::Session, std::optional<double>, std::optional<double>>(),
             py::arg("session"),
             py::arg("fps") = py::none(),
             py::arg("duration_in_sec") = py::none(),
