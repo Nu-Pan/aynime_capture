@@ -81,11 +81,19 @@ void ayc::FrameBuffer::PushFrame(
 		return NowFromQPC();
 	}();
 	// バッファにフレームを追加＆バッファから賞味期限切れのフレームを削除
+	/* @note:
+		「フレームなし」はできるだけ避けたいので、
+		１フレームだけは削除せずに残す。
+	*/
 	{
 		std::scoped_lock<std::mutex> lock(m_guard);
 		m_impl.emplace_back(FRAME{ pTexture, timeSpan });
 		for (;;)
 		{
+			if (m_impl.size() <= 1)
+			{
+				break;
+			}
 			const double frontRelativeInSec = toDurationInSec(nowInTS, m_impl.front().timeSpan);
 			if (frontRelativeInSec <= m_holdInSec)
 			{
@@ -104,6 +112,10 @@ ayc::com_ptr<ID3D11Texture2D> ayc::FrameBuffer::GetFrame(double relativeInSec) c
 		return NowFromQPC();
 	}();
 	// 相対時刻が最も近いフレームを選択する
+	/* @note:
+		フレームバッファーが空のケースは区別したいが、例外で通知しようとするとクソダルい。
+		なので nullptr で通知する。
+	*/
 	FRAME result = {};
 	{
 		std::scoped_lock<std::mutex> lock(m_guard);
@@ -153,6 +165,10 @@ ayc::FreezedFrameBuffer::FreezedFrameBuffer(
 		frameBuffer.m_holdInSec
 	);
 	// 範囲内のフレームを抽出
+	/* @note:
+		FrameBuffer の挙動（可能な限り１枚は有効なフレームを存在させる）と揃えたいので、
+		ここでも可能な限り（たとえ指定時刻の範囲外でも）１フレームを残す。
+	*/ 
 	{
 		std::scoped_lock<std::mutex> lock(frameBuffer.m_guard);
 		auto& srcImpl = frameBuffer.m_impl;
@@ -164,6 +180,12 @@ ayc::FreezedFrameBuffer::FreezedFrameBuffer(
 			{
 				continue;
 			}
+			m_impl.emplace_back(FRAME{ frame.pTexture, relativeInSec });
+		}
+		if (m_impl.empty() and !srcImpl.empty())
+		{
+			const auto frame = srcImpl.back();
+			const auto relativeInSec = toDurationInSec(nowInTS, frame.timeSpan);
 			m_impl.emplace_back(FRAME{ frame.pTexture, relativeInSec });
 		}
 	}

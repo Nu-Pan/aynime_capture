@@ -97,9 +97,9 @@ namespace ayc
             if (!srcTex)
             {
                 return py::make_tuple(
-                    0,
-                    0,
-                    py::bytes("")
+                    py::none(),
+                    py::none(),
+                    py::none()
                 );
             }
             // テクスチャを読み出し
@@ -393,7 +393,8 @@ PYBIND11_MODULE(_aynime_capture, m) {
             &ayc::Session::GetFrameByTime,
             py::arg("time_in_sec"),
             "Return (width, height, frame_buffer) of the frame whose timestamp\n"
-            "is closest to time_in_sec seconds before the latest frame."
+            "is closest to time_in_sec seconds before the latest frame.\n"
+            "If frames buffer is empty, this function returns (None, None, None)."
         );
 
     // Snapshot

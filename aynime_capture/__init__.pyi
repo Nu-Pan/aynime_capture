@@ -30,7 +30,12 @@ class Session:
         """キャプチャセッションを停止する。"""
         ...
 
-    def GetFrameByTime(self, time_in_sec: float) -> tuple[int, int, bytes]:
+    def GetFrameByTime(
+        self,
+        time_in_sec: float
+    ) -> tuple[
+        Optional[int], Optional[int], Optional[bytes]
+    ]:
         """指定した相対時刻に最も近いフレームを取得する。
 
         Args:
@@ -38,6 +43,7 @@ class Session:
 
         Returns:
             (Width, Height, Frame Raw Buffer) のタプル。
+            バックバッファに１枚もフレームがない場合 (NOne, None, None) を返す。
         """
         ...
 
