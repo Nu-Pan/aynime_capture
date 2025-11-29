@@ -22,6 +22,7 @@ ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
 , m_framePool(nullptr)
 , m_revoker()
 , m_captureSession(nullptr)
+, m_holdInSec()
 , m_frameBuffer(holdInSec)
 {
     // キャプチャアイテム生成
