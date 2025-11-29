@@ -9,12 +9,20 @@ class Session:
     バックグラウンドスレッド上でキャプチャが継続して実行されます。
     """
 
-    def __init__(self, hwnd: int, duration_in_sec: float) -> None:
+    def __init__(
+            self,
+            hwnd: int,
+            duration_in_sec: float,
+            max_width: Optional[int],
+            max_height: Optional[int]
+        ) -> None:
         """キャプチャセッションを開始する。
 
         Args:
             hwnd: キャプチャ対象ウィンドウの HWND を int にキャストしたもの。
             duration_in_sec: バッファ上に保持する秒数。
+            max_width: キャプチャしたフレームの最大水平サイズ
+            max_height: キャプチャしたフレームの最大垂直サイズ
         """
         ...
 
