@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------------
 // Include
 //-----------------------------------------------------------------------------
 
@@ -24,20 +24,20 @@ void ayc::ReadbackTexture(
     const ayc::com_ptr<ID3D11Texture2D>& pSourceTexture
 )
 {
-    // nullptr ƒ`ƒFƒbƒN
+    // nullptr ãƒã‚§ãƒƒã‚¯
     if (!pSourceTexture)
     {
         throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("NO Source Texture", pSourceTexture);
     }
-    // ƒeƒNƒXƒ`ƒƒ‚Ì desc ‚ğæ“¾
+    // ãƒ†ã‚¯ã‚¹ãƒãƒ£ã® desc ã‚’å–å¾—
     D3D11_TEXTURE2D_DESC srcDesc{};
     {
         pSourceTexture->GetDesc(&srcDesc);
     }
-    // “Ç‚İo‚µæƒeƒNƒXƒ`ƒƒ‚ğ¶¬
+    // èª­ã¿å‡ºã—å…ˆãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’ç”Ÿæˆ
     com_ptr<ID3D11Texture2D> stgTex;
     {
-        // ‹Lq
+        // è¨˜è¿°
         D3D11_TEXTURE2D_DESC stagingDesc = srcDesc;
         {
             stagingDesc.Usage = D3D11_USAGE_STAGING;
@@ -45,7 +45,7 @@ void ayc::ReadbackTexture(
             stagingDesc.CPUAccessFlags = D3D10_CPU_ACCESS_READ;
             stagingDesc.MiscFlags = 0;
         }
-        // ¶¬
+        // ç”Ÿæˆ
         const HRESULT result = D3DDevice()->CreateTexture2D(
             &stagingDesc,
             nullptr,
@@ -60,17 +60,17 @@ void ayc::ReadbackTexture(
     {
         D3DContext()->CopyResource(stgTex.get(), pSourceTexture.get());
     }
-    // STAGING --> ƒVƒXƒeƒ€ƒƒ‚ƒŠ
+    // STAGING --> ã‚·ã‚¹ãƒ†ãƒ ãƒ¡ãƒ¢ãƒª
     {
 
-        // ƒGƒCƒŠƒAƒX
+        // ã‚¨ã‚¤ãƒªã‚¢ã‚¹
         const UINT width = srcDesc.Width;
         const UINT height = srcDesc.Height;
         const size_t bytesPerPixel = 3;
         const size_t rowSizeInBytes = width * bytesPerPixel;
         const size_t bufferSizeInBytes = rowSizeInBytes * height;
 
-        // ƒ}ƒbƒv
+        // ãƒãƒƒãƒ—
         D3D11_MAPPED_SUBRESOURCE mapped{};
         {
             const HRESULT result = D3DContext()->Map(stgTex.get(), 0, D3D11_MAP_READ, 0, &mapped);
@@ -79,8 +79,8 @@ void ayc::ReadbackTexture(
                 throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to ID3D11DeviceContext::Map", result);
             }
         }
-        // ƒRƒs[
-        // @note: ‚±‚±‚ÅƒAƒ‹ƒtƒ@‚ğÌ‚Ä‚é
+        // ã‚³ãƒ”ãƒ¼
+        // @note: ã“ã“ã§ã‚¢ãƒ«ãƒ•ã‚¡ã‚’æ¨ã¦ã‚‹
         {
             outBuffer.resize(bufferSizeInBytes);
             auto const pDstBase = reinterpret_cast<std::uint8_t*>(outBuffer.data());
@@ -99,12 +99,12 @@ void ayc::ReadbackTexture(
                 }
             }
         }
-        // ƒAƒ“ƒ}ƒbƒv
+        // ã‚¢ãƒ³ãƒãƒƒãƒ—
         {
             D3DContext()->Unmap(stgTex.get(), 0);
         }
     }
-    // ƒTƒCƒY‚ğ‘‚«–ß‚·
+    // ã‚µã‚¤ã‚ºã‚’æ›¸ãæˆ»ã™
     {
         outWidth = static_cast<std::size_t>(srcDesc.Width);
         outHeight = static_cast<std::size_t>(srcDesc.Height);
@@ -124,7 +124,7 @@ ayc::AsyncTextureReadback::AsyncTextureReadback(
     , m_jobs()
     , m_thread()
 {
-    // ƒGƒ“ƒgƒŠ[‚ğ¶¬
+    // ã‚¨ãƒ³ãƒˆãƒªãƒ¼ã‚’ç”Ÿæˆ
     m_jobs.reserve(sourceTextures.size());
     for (const auto& srcTex : sourceTextures)
     {
@@ -134,7 +134,7 @@ ayc::AsyncTextureReadback::AsyncTextureReadback(
             /*completed=*/false
         });
     }
-    // ƒXƒŒƒbƒh‹N“®
+    // ã‚¹ãƒ¬ãƒƒãƒ‰èµ·å‹•
     {
         m_thread = std::thread(std::bind(&AsyncTextureReadback::_ThreadHandler, this));
     }
@@ -150,7 +150,7 @@ ayc::AsyncTextureReadback::~AsyncTextureReadback()
 //-----------------------------------------------------------------------------
 const ayc::AsyncTextureReadback::RESULT& ayc::AsyncTextureReadback::operator[](std::size_t index) const
 {
-    // ƒGƒ‰[ƒ`ƒFƒbƒN
+    // ã‚¨ãƒ©ãƒ¼ãƒã‚§ãƒƒã‚¯
     if (index >= m_jobs.size())
     {
         throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("Index Out of Range", index);
@@ -160,12 +160,12 @@ const ayc::AsyncTextureReadback::RESULT& ayc::AsyncTextureReadback::operator[](s
     {
         throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("Skipped Frame", index);
     }
-    // “]‘—I—¹‚ğ‘Ò‹@‚·‚é
+    // è»¢é€çµ‚äº†ã‚’å¾…æ©Ÿã™ã‚‹
     {
         std::unique_lock lock(m_mutex);
         m_cv.wait(lock, [&] {return job.completed; });
     }
-    // Œ‹‰Ê‚ğ•Ô‚·
+    // çµæœã‚’è¿”ã™
     return job.result;
 }
 
@@ -173,28 +173,28 @@ const ayc::AsyncTextureReadback::RESULT& ayc::AsyncTextureReadback::operator[](s
 void ayc::AsyncTextureReadback::_ThreadHandler()
 {
     /* TODO
-        - ƒAƒ‹ƒtƒ@ƒ`ƒƒƒ“ƒlƒ‹‚¢‚ç‚È‚¢
-        - by::bytes ‚Éˆê”­‚ÅƒRƒs[‚µ‚½‚¢
+        - ã‚¢ãƒ«ãƒ•ã‚¡ãƒãƒ£ãƒ³ãƒãƒ«ã„ã‚‰ãªã„
+        - by::bytes ã«ä¸€ç™ºã§ã‚³ãƒ”ãƒ¼ã—ãŸã„
     */
     for (auto& job : m_jobs)
     {
-        // null ‚È‚çƒXƒLƒbƒv
+        // null ãªã‚‰ã‚¹ã‚­ãƒƒãƒ—
         /* @note:
-            –‘O‚É‹ó—v‘f‚ğ‹l‚ß‚éˆ—‚ğ‘‚­‚Ì‚ªƒ_ƒ‹‚©‚Á‚½‚Ì‚ÅA‚ ‚¦‚Ä nullptr ‚ğ‹–—e‚µ‚Ä‚¢‚éB
-            ‚È‚Ì‚ÅAƒXƒLƒbƒv‚·‚é‚Ì‚ª³‚µ‚¢B
+            äº‹å‰ã«ç©ºè¦ç´ ã‚’è©°ã‚ã‚‹å‡¦ç†ã‚’æ›¸ãã®ãŒãƒ€ãƒ«ã‹ã£ãŸã®ã§ã€ã‚ãˆã¦ nullptr ã‚’è¨±å®¹ã—ã¦ã„ã‚‹ã€‚
+            ãªã®ã§ã€ã‚¹ã‚­ãƒƒãƒ—ã™ã‚‹ã®ãŒæ­£ã—ã„ã€‚
         */
         const auto& pSrcTex = job.pSourceTexture;
         if (!pSrcTex) {
             continue;
         }
-        // “Ç‚İo‚µ
+        // èª­ã¿å‡ºã—
         ReadbackTexture(
             job.result.width,
             job.result.height,
             job.result.textureBuffer,
             pSrcTex
         );
-        // ‘‚«‚İŠ®—¹‚ğ’Ê’m
+        // æ›¸ãè¾¼ã¿å®Œäº†ã‚’é€šçŸ¥
         {
             std::scoped_lock lock(m_mutex);
             job.completed = true;
@@ -202,3 +202,5 @@ void ayc::AsyncTextureReadback::_ThreadHandler()
         m_cv.notify_all();
     }
 }
+
+

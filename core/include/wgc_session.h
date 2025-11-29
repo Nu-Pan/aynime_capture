@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include "frame_buffer.h"
 
@@ -7,29 +7,29 @@ namespace ayc
 	class WGCSession
 	{
 	public:
-		// ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+		// ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 		WGCSession(HWND hwnd, double holdInSec);
 
-		// ƒfƒXƒgƒ‰ƒNƒ^
+		// ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 		~WGCSession();
 
-		// ƒZƒbƒVƒ‡ƒ“‚ğ’â~
+		// ã‚»ãƒƒã‚·ãƒ§ãƒ³ã‚’åœæ­¢
 		void Close();
 
-		// ’PˆêƒtƒŒ[ƒ€‚ÌƒRƒs[‚ğ“¾‚é
+		// å˜ä¸€ãƒ•ãƒ¬ãƒ¼ãƒ ã®ã‚³ãƒ”ãƒ¼ã‚’å¾—ã‚‹
 		com_ptr<ID3D11Texture2D> CopyFrame(double relativeInSec) const;
 
-		// ƒoƒbƒNƒoƒbƒtƒ@‚ÌƒRƒs[iƒXƒiƒbƒvƒVƒ‡ƒbƒgj‚ğ“¾‚é
+		// ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡ã®ã‚³ãƒ”ãƒ¼ï¼ˆã‚¹ãƒŠãƒƒãƒ—ã‚·ãƒ§ãƒƒãƒˆï¼‰ã‚’å¾—ã‚‹
 		FreezedFrameBuffer CopyFrameBuffer(double durationInSec);
 
-		// ƒoƒbƒNƒoƒbƒtƒ@•Û•b”‚ğæ“¾
+		// ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡ä¿æŒç§’æ•°ã‚’å–å¾—
 		double GetHoldInSec() const
 		{
 			return m_holdInSec;
 		}
 
 	private:
-		// ƒtƒŒ[ƒ€“’…ƒnƒ“ƒhƒ‰
+		// ãƒ•ãƒ¬ãƒ¼ãƒ åˆ°ç€ãƒãƒ³ãƒ‰ãƒ©
 		void OnFrameArrived(
 			const Direct3D11CaptureFramePool& sender,
 			const WinRTIInspectable& args
@@ -48,3 +48,5 @@ namespace ayc
 		FrameBuffer			m_frameBuffer;
 	};
 }
+
+

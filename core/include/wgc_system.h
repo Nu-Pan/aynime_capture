@@ -1,12 +1,12 @@
-#pragma once
+ï»¿#pragma once
 
 namespace ayc
 {
 
-	// ‰Šú‰»
+	// åˆæœŸåŒ–
 	void Initialize();
 
-	// Œãn––
+	// å¾Œå§‹æœ«
 	void Finalize();
 
 	// D3D 11 Device
@@ -18,3 +18,4 @@ namespace ayc
 	// WinRT D3D Device
 	const IDirect3DDevice& WRTDevice();
 }
+

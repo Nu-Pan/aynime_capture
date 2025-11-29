@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 
 namespace ayc
@@ -14,42 +14,42 @@ namespace ayc
 	// FrameBuffer
 	//-------------------------------------------------------------------------
 
-	// ƒtƒŒ[ƒ€ƒoƒbƒtƒ@
+	// ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡
 	/* @note:
-		WGC ‚ª’Ê’m‚µ‚Ä‚«‚½ƒtƒŒ[ƒ€‚Ì’¼Ú“I‚Èó‚¯“ü‚êæB
-		‰ß‹ˆê’è•b”‚ÌŠÔ‚ÌƒtƒŒ[ƒ€‚ğ•Û‚·‚é‚Ì‚ª–ğ–ÚB
+		WGC ãŒé€šçŸ¥ã—ã¦ããŸãƒ•ãƒ¬ãƒ¼ãƒ ã®ç›´æ¥çš„ãªå—ã‘å…¥ã‚Œå…ˆã€‚
+		éå»ä¸€å®šç§’æ•°ã®é–“ã®ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’ä¿æŒã™ã‚‹ã®ãŒå½¹ç›®ã€‚
 	*/
 	class FrameBuffer
 	{
 		friend class FreezedFrameBuffer;
 
 	public:
-		// ƒtƒŒ[ƒ€‚P–‡‚ğ•\‚·\‘¢‘Ì
+		// ãƒ•ãƒ¬ãƒ¼ãƒ ï¼‘æšã‚’è¡¨ã™æ§‹é€ ä½“
 		struct FRAME
 		{
 			com_ptr<ID3D11Texture2D> pTexture;
 			TimeSpan timeSpan;
 		};
 
-		// “à•”ƒRƒ“ƒeƒiŒ^
+		// å†…éƒ¨ã‚³ãƒ³ãƒ†ãƒŠå‹
 		typedef std::deque<FRAME> Impl;
 
-		// ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+		// ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 		FrameBuffer(double holdInSec);
 
-		// ƒfƒXƒgƒ‰ƒNƒ^
+		// ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 		~FrameBuffer() = default;
 
-		// ƒtƒŒ[ƒ€‚ğ‘Síœ
+		// ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’å…¨å‰Šé™¤
 		void Clear();
 
-		// ƒtƒŒ[ƒ€‚ğ‚P‚Â’Ç‰Á‚·‚é
+		// ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’ï¼‘ã¤è¿½åŠ ã™ã‚‹
 		void PushFrame(
 			const com_ptr<ID3D11Texture2D>& pTexture,
 			const TimeSpan& timeSpan
 		);
 
-		// ‘Š‘Îw’è‚ÅƒtƒŒ[ƒ€‚ğ‚P‚Âæ“¾‚·‚é
+		// ç›¸å¯¾æ™‚åˆ»æŒ‡å®šã§ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’ï¼‘ã¤å–å¾—ã™ã‚‹
 		com_ptr<ID3D11Texture2D> GetFrame(double relativeInSec) const;
 
 
@@ -63,40 +63,40 @@ namespace ayc
 	// FreezedFrameBuffer
 	//-------------------------------------------------------------------------
 
-	// “€Œ‹ƒtƒŒ[ƒ€ƒoƒbƒtƒ@
-	// @note: —v‚·‚é‚ÉƒXƒiƒbƒvƒVƒ‡ƒbƒg
+	// å‡çµãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡
+	// @note: è¦ã™ã‚‹ã«ã‚¹ãƒŠãƒƒãƒ—ã‚·ãƒ§ãƒƒãƒˆ
 	class FreezedFrameBuffer
 	{
 	public:
-		// ƒtƒŒ[ƒ€‚P–‡‚ğ•\‚·\‘¢‘Ì
+		// ãƒ•ãƒ¬ãƒ¼ãƒ ï¼‘æšã‚’è¡¨ã™æ§‹é€ ä½“
 		struct FRAME
 		{
 			com_ptr<ID3D11Texture2D> pTexture;
 			double relativeInSec;
 		};
 
-		// “à•”ƒRƒ“ƒeƒiŒ^
+		// å†…éƒ¨ã‚³ãƒ³ãƒ†ãƒŠå‹
 		typedef std::vector<FRAME> Impl;
 
-		// ƒfƒtƒHƒ‹ƒgƒRƒ“ƒXƒgƒ‰ƒNƒ^
+		// ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 		FreezedFrameBuffer();
 
-		// ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+		// ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 		FreezedFrameBuffer(
 			const FrameBuffer& frameBuffer,
 			double durationInSec
 		);
 
-		// ƒfƒXƒgƒ‰ƒNƒ^
+		// ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 		~FreezedFrameBuffer() = default;
 
-		// ƒtƒŒ[ƒ€”‚ğ•Ô‚·
+		// ãƒ•ãƒ¬ãƒ¼ãƒ æ•°ã‚’è¿”ã™
 		std::size_t GetSize() const noexcept
 		{
 			return m_impl.size();
 		}
 
-		// ƒCƒeƒŒ[ƒ^
+		// ã‚¤ãƒ†ãƒ¬ãƒ¼ã‚¿
 		using iterator = Impl::const_iterator;
 		using const_iterator = Impl::const_iterator;
 		const_iterator begin() const noexcept
@@ -108,13 +108,15 @@ namespace ayc
 			return m_impl.cend();
 		}
 
-		// w’è‘Š‘Î‚ÆÅ‚à‹ß‚¢ƒtƒŒ[ƒ€‚ÌƒCƒ“ƒfƒbƒNƒX‚ğæ“¾‚·‚é
+		// æŒ‡å®šç›¸å¯¾æ™‚åˆ»ã¨æœ€ã‚‚è¿‘ã„ãƒ•ãƒ¬ãƒ¼ãƒ ã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’å–å¾—ã™ã‚‹
 		std::size_t GetFrameIndex(double relativeInSec) const;
 
-		// ƒCƒ“ƒeƒbƒNƒXw’è‚ÅƒtƒŒ[ƒ€‚ğ‚P‚Âæ“¾‚·‚é
+		// ã‚¤ãƒ³ãƒ†ãƒƒã‚¯ã‚¹æŒ‡å®šã§ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’ï¼‘ã¤å–å¾—ã™ã‚‹
 		com_ptr<ID3D11Texture2D> operator [](std::size_t index) const;
 
 	private:
 		Impl	m_impl;
 	};
 }
+
+

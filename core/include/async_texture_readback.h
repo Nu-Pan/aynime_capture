@@ -1,9 +1,9 @@
-
+ï»¿
 #pragma once
 
 namespace ayc
 {
-	// ƒeƒNƒXƒ`ƒƒ‚©‚çƒƒ‚ƒŠƒCƒ[ƒW‚ğ“Ç‚İo‚·
+	// ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‹ã‚‰ãƒ¡ãƒ¢ãƒªã‚¤ãƒ¡ãƒ¼ã‚¸ã‚’èª­ã¿å‡ºã™
 	void ReadbackTexture(
 		std::size_t& outWidth,
 		std::size_t& outHeight,
@@ -11,7 +11,7 @@ namespace ayc
 		const ayc::com_ptr<ID3D11Texture2D>& pSourceTexture
 	);
 
-	// GPU ƒeƒNƒXƒ`ƒƒ‚ÌƒƒCƒ“ƒƒ‚ƒŠ‚Ö‚Ì“Ç‚İo‚µ‚ğ”ñ“¯Šú‚Ås‚¤ƒNƒ‰ƒX
+	// GPU ãƒ†ã‚¯ã‚¹ãƒãƒ£ã®ãƒ¡ã‚¤ãƒ³ãƒ¡ãƒ¢ãƒªã¸ã®èª­ã¿å‡ºã—ã‚’éåŒæœŸã§è¡Œã†ã‚¯ãƒ©ã‚¹
 	class AsyncTextureReadback
 	{
 	public:
@@ -22,23 +22,23 @@ namespace ayc
 			std::string textureBuffer;
 		};
 
-		// ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+		// ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 		AsyncTextureReadback(
 			const std::vector<ayc::com_ptr<ID3D11Texture2D>>& sourceTextures
 		);
 
-		// ƒfƒXƒgƒ‰ƒNƒ^
+		// ãƒ‡ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
 		~AsyncTextureReadback();
 
-		// ƒRƒs[‹Ö~
+		// ã‚³ãƒ”ãƒ¼ç¦æ­¢
 		AsyncTextureReadback(const AsyncTextureReadback&) = delete;
 		AsyncTextureReadback& operator=(const AsyncTextureReadback&) = delete;
 
-		// “Ç‚İo‚µŒ‹‰Ê‚ğ“¾‚é
+		// èª­ã¿å‡ºã—çµæœã‚’å¾—ã‚‹
 		const RESULT& operator[](std::size_t index) const;
 
 	private:
-		// “]‘—Œ‹‰Ê‚Ìæ“¾Œ ƒIƒuƒWƒFƒNƒg
+		// è»¢é€çµæœã®å–å¾—æ¨©ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ
 		struct _JOB
 		{
 			ayc::com_ptr<ID3D11Texture2D>	pSourceTexture;
@@ -46,13 +46,14 @@ namespace ayc
 			bool							completed;
 		};
 
-		// BG ƒXƒŒƒbƒhƒnƒ“ƒhƒ‰
+		// BG ã‚¹ãƒ¬ãƒƒãƒ‰ãƒãƒ³ãƒ‰ãƒ©
 		void _ThreadHandler();
 
-		// “à•”ó‘Ô
+		// å†…éƒ¨çŠ¶æ…‹
 		mutable std::mutex				m_mutex;
 		mutable std::condition_variable	m_cv;
 		std::vector<_JOB>				m_jobs;
 		std::thread						m_thread;
 	};
 }
+

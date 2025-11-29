@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------------
 // Include
 //-----------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@
 
 namespace
 {
-	// ”ÍˆÍ“à‚ÅÅ‚à•]‰¿’l‚ª¬‚³‚­‚È‚é—v‘f‚ğ’T‚·
+	// ç¯„å›²å†…ã§æœ€ã‚‚è©•ä¾¡å€¤ãŒå°ã•ããªã‚‹è¦ç´ ã‚’æ¢ã™
 	template<std::input_iterator Iter, class EvalFunc>
 	Iter _FindMinElement(
 		Iter first,
@@ -25,12 +25,12 @@ namespace
 		EvalFunc evalFunc
 	)
 	{
-		// ƒTƒCƒYƒ[ƒ‚È‚ç last ‚ğ‚»‚Ì‚Ü‚Ü•Ô‚·
+		// ã‚µã‚¤ã‚ºã‚¼ãƒ­ãªã‚‰ last ã‚’ãã®ã¾ã¾è¿”ã™
 		if (first == last)
 		{
 			return last;
 		}
-		// •]‰¿’l‚ªÅ¬‚Æ‚È‚é—v‘f‚ğüŒ`’Tõ
+		// è©•ä¾¡å€¤ãŒæœ€å°ã¨ãªã‚‹è¦ç´ ã‚’ç·šå½¢æ¢ç´¢
 		auto minIter = first;
 		auto minScore = evalFunc(*first);
 		for (Iter iter = std::next(first); iter != last; ++iter)
@@ -56,7 +56,7 @@ ayc::FrameBuffer::FrameBuffer(double holdInSec)
 , m_impl()
 , m_holdInSec(holdInSec)
 {
-	// •Û•b”‚Í³’l‚¶‚á‚È‚¢‚Æƒ_ƒ
+	// ä¿æŒç§’æ•°ã¯æ­£å€¤ã˜ã‚ƒãªã„ã¨ãƒ€ãƒ¡
 	if (holdInSec <= 0.0)
 	{
 		throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("holdInSec must be semi-positive", holdInSec);
@@ -76,13 +76,13 @@ void ayc::FrameBuffer::PushFrame(
 	const TimeSpan& timeSpan
 )
 {
-	// uŒ»İv‚ğŠm’è‚³‚¹‚é
+	// ã€Œç¾åœ¨ã€ã‚’ç¢ºå®šã•ã›ã‚‹
 	const TimeSpan nowInTS = []() {
 		return NowFromQPC();
 	}();
-	// ƒoƒbƒtƒ@‚ÉƒtƒŒ[ƒ€‚ğ’Ç‰Á•ƒoƒbƒtƒ@‚©‚çÜ–¡ŠúŒÀØ‚ê‚ÌƒtƒŒ[ƒ€‚ğíœ
+	// ãƒãƒƒãƒ•ã‚¡ã«ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’è¿½åŠ ï¼†ãƒãƒƒãƒ•ã‚¡ã‹ã‚‰è³å‘³æœŸé™åˆ‡ã‚Œã®ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’å‰Šé™¤
 	/* @note:
-		•K‚¸‰½–^‚©‚ÌƒtƒŒ[ƒ€‚ª‚P‚Â‚Í•Ô‚é‚æ‚¤‚É‚µ‚½‚¢‚Ì‚ÅA‚PƒtƒŒ[ƒ€‚Íc‚·B
+		å¿…ãšä½•æŸã‹ã®ãƒ•ãƒ¬ãƒ¼ãƒ ãŒï¼‘ã¤ã¯è¿”ã‚‹ã‚ˆã†ã«ã—ãŸã„ã®ã§ã€ï¼‘ãƒ•ãƒ¬ãƒ¼ãƒ ã¯æ®‹ã™ã€‚
 	*/
 	{
 		std::scoped_lock<std::mutex> lock(m_guard);
@@ -106,11 +106,11 @@ void ayc::FrameBuffer::PushFrame(
 //-----------------------------------------------------------------------------
 ayc::com_ptr<ID3D11Texture2D> ayc::FrameBuffer::GetFrame(double relativeInSec) const
 {
-	// uŒ»İv‚ğŠm’è‚³‚¹‚é
+	// ã€Œç¾åœ¨ã€ã‚’ç¢ºå®šã•ã›ã‚‹
 	const TimeSpan nowInTS = []() {
 		return NowFromQPC();
 	}();
-	// ‘Š‘Î‚ªÅ‚à‹ß‚¢ƒtƒŒ[ƒ€‚ğ‘I‘ğ‚·‚é
+	// ç›¸å¯¾æ™‚åˆ»ãŒæœ€ã‚‚è¿‘ã„ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’é¸æŠã™ã‚‹
 	FRAME result = {};
 	{
 		std::scoped_lock<std::mutex> lock(m_guard);
@@ -149,20 +149,20 @@ ayc::FreezedFrameBuffer::FreezedFrameBuffer(
 )
 : m_impl()
 {
-	// uŒ»İv‚ğŠm’è‚³‚¹‚é
+	// ã€Œç¾åœ¨ã€ã‚’ç¢ºå®šã•ã›ã‚‹
 	const TimeSpan nowInTS = []()
 	{
 		return NowFromQPC();
 	}();
-	// ƒXƒiƒbƒvƒVƒ‡ƒbƒgŠÔ’·‚ğ‰ğŒˆ
+	// ã‚¹ãƒŠãƒƒãƒ—ã‚·ãƒ§ãƒƒãƒˆæ™‚é–“é•·ã‚’è§£æ±º
 	const auto actualDuration = std::min(
 		durationInSec,
 		frameBuffer.m_holdInSec
 	);
-	// ”ÍˆÍ“à‚ÌƒtƒŒ[ƒ€‚ğ’Šo
+	// ç¯„å›²å†…ã®ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’æŠ½å‡º
 	/* @note:
-		FrameBuffer ‚Ì‹““®i•K‚¸‚P–‡‚Í—LŒø‚ÈƒtƒŒ[ƒ€‚ª‘¶İ‚·‚éj‚Æ‘µ‚¦‚½‚¢‚Ì‚ÅA
-		‚±‚±‚Å‚àÅ’á‚Å‚à‚PƒtƒŒ[ƒ€‚Í•Ô‚·B
+		FrameBuffer ã®æŒ™å‹•ï¼ˆå¿…ãšï¼‘æšã¯æœ‰åŠ¹ãªãƒ•ãƒ¬ãƒ¼ãƒ ãŒå­˜åœ¨ã™ã‚‹ï¼‰ã¨æƒãˆãŸã„ã®ã§ã€
+		ã“ã“ã§ã‚‚æœ€ä½ã§ã‚‚ï¼‘ãƒ•ãƒ¬ãƒ¼ãƒ ã¯è¿”ã™ã€‚
 	*/
 	{
 		std::scoped_lock<std::mutex> lock(frameBuffer.m_guard);
@@ -184,7 +184,7 @@ ayc::FreezedFrameBuffer::FreezedFrameBuffer(
 			m_impl.emplace_back(FRAME{ frame.pTexture, relativeInSec });
 		}
 	}
-	// ƒtƒŒ[ƒ€‚ğ‚Å~‡‚Éƒ\[ƒg
+	// ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’æ™‚åˆ»ã§é™é †ã«ã‚½ãƒ¼ãƒˆ
 	{
 		std::sort(
 			m_impl.begin(),
@@ -194,7 +194,7 @@ ayc::FreezedFrameBuffer::FreezedFrameBuffer(
 	}
 }
 
-// w’è‘Š‘Î‚ÆÅ‚à‹ß‚¢ƒtƒŒ[ƒ€‚ÌƒCƒ“ƒfƒbƒNƒX‚ğæ“¾‚·‚é
+// æŒ‡å®šç›¸å¯¾æ™‚åˆ»ã¨æœ€ã‚‚è¿‘ã„ãƒ•ãƒ¬ãƒ¼ãƒ ã®ã‚¤ãƒ³ãƒ‡ãƒƒã‚¯ã‚¹ã‚’å–å¾—ã™ã‚‹
 std::size_t ayc::FreezedFrameBuffer::GetFrameIndex(double relativeInSec) const
 {
 	auto iter = _FindMinElement(
@@ -213,3 +213,5 @@ ayc::com_ptr<ID3D11Texture2D> ayc::FreezedFrameBuffer::operator [](std::size_t i
 {
 	return m_impl[index].pTexture;
 }
+
+

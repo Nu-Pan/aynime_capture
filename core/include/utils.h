@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 namespace ayc
 {
@@ -6,31 +6,31 @@ namespace ayc
     // std
     //-------------------------------------------------------------------------
 
-    // TimeSpan ‚Ì·‚©‚ç•b’PˆÊ‚Ì’·‚³‚ğŒvZ
+    // TimeSpan ã®å·®ã‹ã‚‰ç§’å˜ä½ã®é•·ã•ã‚’è¨ˆç®—
     inline double toDurationInSec(TimeSpan stop, TimeSpan start)
     {
         return std::chrono::duration<double>(stop - start).count();
     }
 
-    // Œ»İ‚ğ QPC ‚©‚ç“¾‚é
+    // ç¾åœ¨æ™‚åˆ»ã‚’ QPC ã‹ã‚‰å¾—ã‚‹
     TimeSpan NowFromQPC();
 
     //-------------------------------------------------------------------------
     // windows
     //-------------------------------------------------------------------------
 
-    // HRESULT --> lŠÔ‚ª“Ç‚ß‚éà–¾•¶š—ñ
+    // HRESULT --> äººé–“ãŒèª­ã‚ã‚‹èª¬æ˜æ–‡å­—åˆ—
     std::string hresult_to_string(HRESULT hresultValue);
 
     //-------------------------------------------------------------------------
     // GeneralError
     //-------------------------------------------------------------------------
 
-    // Œ^“I‚É‹æ•Ê‚·‚é•K—v‚Ì‚È‚¢**‘‡“I‚È**ƒGƒ‰[
+    // å‹çš„ã«åŒºåˆ¥ã™ã‚‹å¿…è¦ã®ãªã„**ç·åˆçš„ãª**ã‚¨ãƒ©ãƒ¼
     class GeneralError : public std::exception
     {
     public:
-        // ƒRƒ“ƒXƒgƒ‰ƒNƒ^
+        // ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿
         GeneralError
         (
             const char* pDescription,
@@ -41,22 +41,22 @@ namespace ayc
             const std::stacktrace& stackTrace
         );
 
-        // ƒGƒ‰[‚Ìà–¾‚ğæ“¾
+        // ã‚¨ãƒ©ãƒ¼ã®èª¬æ˜ã‚’å–å¾—
         const std::string& GetDescription() const;
 
-        // ƒGƒ‰[‚ğŒŸ’m‚µ‚½s‚Ìƒtƒ@ƒCƒ‹–¼‚ğæ“¾
+        // ã‚¨ãƒ©ãƒ¼ã‚’æ¤œçŸ¥ã—ãŸè¡Œã®ãƒ•ã‚¡ã‚¤ãƒ«åã‚’å–å¾—
         const std::string& GetFile() const;
 
-        // ƒGƒ‰[‚ğŒŸ’m‚µ‚½s‚Ìs”‚ğæ“¾
+        // ã‚¨ãƒ©ãƒ¼ã‚’æ¤œçŸ¥ã—ãŸè¡Œã®è¡Œæ•°ã‚’å–å¾—
         int GetLine() const;
 
-        // ”­¶‚µ‚½ƒGƒ‰[‚ÌuƒL[v‚ğæ“¾
+        // ç™ºç”Ÿã—ãŸã‚¨ãƒ©ãƒ¼ã®ã€Œã‚­ãƒ¼ã€ã‚’å–å¾—
         const std::string& GetErrorKey() const;
 
-        // ”­¶‚µ‚½ƒGƒ‰[‚Ìu’lv‚ğæ“¾
+        // ç™ºç”Ÿã—ãŸã‚¨ãƒ©ãƒ¼ã®ã€Œå€¤ã€ã‚’å–å¾—
         const std::string& GetErrorValue() const;
 
-        // ƒGƒ‰[‚ğŒŸo‚µ‚½‚ÌƒXƒ^ƒbƒNƒgƒŒ[ƒX‚ğæ“¾
+        // ã‚¨ãƒ©ãƒ¼ã‚’æ¤œå‡ºã—ãŸæ™‚ã®ã‚¹ã‚¿ãƒƒã‚¯ãƒˆãƒ¬ãƒ¼ã‚¹ã‚’å–å¾—
         const std::stacktrace& GetStackTrace() const;
 
     private:
@@ -68,11 +68,11 @@ namespace ayc
         std::stacktrace m_stackTrace;
     };
 
-    /* GeneralError ‚ğ¶¬‚·‚é
+    /* GeneralError ã‚’ç”Ÿæˆã™ã‚‹
     @note:
-        •â•î•ñ–³‚µ‚ÅƒGƒ‰[‚ğŒŸ’m‚µ‚½‚Ég‚¤B
-        ŠO•”ƒRƒ“ƒXƒgƒ‰ƒNƒ^“I‚È—§‚¿ˆÊ’u
-        ’Êí‚Í MAKE_GENERAL_ERROR ‚©‚çŒÄ‚Ño‚·
+        è£œåŠ©æƒ…å ±ç„¡ã—ã§ã‚¨ãƒ©ãƒ¼ã‚’æ¤œçŸ¥ã—ãŸæ™‚ã«ä½¿ã†ã€‚
+        å¤–éƒ¨ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿çš„ãªç«‹ã¡ä½ç½®
+        é€šå¸¸ã¯ MAKE_GENERAL_ERROR ã‹ã‚‰å‘¼ã³å‡ºã™
     */
     inline GeneralError MakeGeneralError
     (
@@ -93,11 +93,11 @@ namespace ayc
         );
     }
 
-    /* GeneralError ‚ğ¶¬‚·‚é
+    /* GeneralError ã‚’ç”Ÿæˆã™ã‚‹
     @note:
-        ”CˆÓ‚Ìƒpƒ‰ƒ[ƒ^‚ÌƒGƒ‰[‚ğŒŸ’m‚µ‚½‚Ég‚¤B
-        ŠO•”ƒRƒ“ƒXƒgƒ‰ƒNƒ^“I‚È—§‚¿ˆÊ’u
-        ’Êí‚Í MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER ‚©‚çŒÄ‚Ño‚·
+        ä»»æ„ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã®ã‚¨ãƒ©ãƒ¼ã‚’æ¤œçŸ¥ã—ãŸæ™‚ã«ä½¿ã†ã€‚
+        å¤–éƒ¨ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿çš„ãªç«‹ã¡ä½ç½®
+        é€šå¸¸ã¯ MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER ã‹ã‚‰å‘¼ã³å‡ºã™
     */
     template<typename T>
     inline GeneralError MakeGeneralErrorFromAnyParameter
@@ -110,7 +110,7 @@ namespace ayc
         const std::stacktrace& stackTrace
     )
     {
-        // ’l‚ğ•¶š—ñ‰»
+        // å€¤ã‚’æ–‡å­—åˆ—åŒ–
         std::string valueString;
         if constexpr (std::formattable<T, char>)
         {
@@ -128,7 +128,7 @@ namespace ayc
         {
             valueString = typeid(T).name();
         }
-        // GeneraError ‚É•ÏŠ·
+        // GeneraError ã«å¤‰æ›
         return GeneralError
         (
             pDescription,
@@ -140,11 +140,11 @@ namespace ayc
         );
     }
 
-    /* GeneralError ‚ğ¶¬‚·‚é
+    /* GeneralError ã‚’ç”Ÿæˆã™ã‚‹
     @note:
-        HRESULT ‚Å‚ğŒŸ’m‚µ‚½‚Ég‚¤B
-        ŠO•”ƒRƒ“ƒXƒgƒ‰ƒNƒ^“I‚È—§‚¿ˆÊ’u
-        ’Êí‚Í MAKE_GENERAL_ERROR_FROM_HRESULT ‚©‚çŒÄ‚Ño‚·
+        HRESULT ã§ã‚’æ¤œçŸ¥ã—ãŸæ™‚ã«ä½¿ã†ã€‚
+        å¤–éƒ¨ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿çš„ãªç«‹ã¡ä½ç½®
+        é€šå¸¸ã¯ MAKE_GENERAL_ERROR_FROM_HRESULT ã‹ã‚‰å‘¼ã³å‡ºã™
     */
     inline GeneralError MakeGeneralErrorFromHresult
     (
@@ -166,11 +166,11 @@ namespace ayc
         );
     }
 
-    /* GeneralError ‚ğ¶¬‚·‚é
+    /* GeneralError ã‚’ç”Ÿæˆã™ã‚‹
     @note:
-        ‚È‚ñ‚ç‚©‚Ì C++ —áŠO‚ğƒLƒƒƒbƒ`‚µ‚½‚Ég‚¤B
-        ŠO•”ƒRƒ“ƒXƒgƒ‰ƒNƒ^“I‚È—§‚¿ˆÊ’u
-        ’Êí‚Í MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION ‚©‚çŒÄ‚Ño‚·
+        ãªã‚“ã‚‰ã‹ã® C++ ä¾‹å¤–ã‚’ã‚­ãƒ£ãƒƒãƒã—ãŸæ™‚ã«ä½¿ã†ã€‚
+        å¤–éƒ¨ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿çš„ãªç«‹ã¡ä½ç½®
+        é€šå¸¸ã¯ MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION ã‹ã‚‰å‘¼ã³å‡ºã™
     */
     template<class T>
     inline GeneralError MakeGeneralErrorFromCppException
@@ -194,11 +194,11 @@ namespace ayc
         );
     }
 
-    /* GeneralError ‚ğ¶¬‚·‚é
+    /* GeneralError ã‚’ç”Ÿæˆã™ã‚‹
     @note:
-        ‚È‚ñ‚ç‚©‚Ì WinRT —áŠO‚ğƒLƒƒƒbƒ`‚µ‚½‚Ég‚¤B
-        ŠO•”ƒRƒ“ƒXƒgƒ‰ƒNƒ^“I‚È—§‚¿ˆÊ’u
-        ’Êí‚Í MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION ‚©‚çŒÄ‚Ño‚·
+        ãªã‚“ã‚‰ã‹ã® WinRT ä¾‹å¤–ã‚’ã‚­ãƒ£ãƒƒãƒã—ãŸæ™‚ã«ä½¿ã†ã€‚
+        å¤–éƒ¨ã‚³ãƒ³ã‚¹ãƒˆãƒ©ã‚¯ã‚¿çš„ãªç«‹ã¡ä½ç½®
+        é€šå¸¸ã¯ MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION ã‹ã‚‰å‘¼ã³å‡ºã™
     */
     template<class T>
     inline GeneralError MakeGeneralErrorFromWinRTException
@@ -230,11 +230,11 @@ namespace ayc
         );
     }
 
-    // GeneralError ‚ğ Python —áŠO‚Æ‚µ‚Ä“Š‚°‚é
+    // GeneralError ã‚’ Python ä¾‹å¤–ã¨ã—ã¦æŠ•ã’ã‚‹
     void ThrowGeneralErrorAsPython(const ayc::GeneralError& e);
 }
 
-// •â•î•ñ‚È‚µ‚Å GeneralError ‚ğ¶¬‚·‚é
+// è£œåŠ©æƒ…å ±ãªã—ã§ GeneralError ã‚’ç”Ÿæˆã™ã‚‹
 #define MAKE_GENERAL_ERROR(description)\
     ayc::MakeGeneralError\
     (\
@@ -244,7 +244,7 @@ namespace ayc
         std::stacktrace::current()\
     )
 
-// ”CˆÓƒpƒ‰ƒ[ƒ^‚ ‚è‚Å GeneralError ‚ğ¶¬‚·‚é
+// ä»»æ„ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚ã‚Šã§ GeneralError ã‚’ç”Ÿæˆã™ã‚‹
 #define MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER(description, anyParameter) \
     ayc::MakeGeneralErrorFromAnyParameter\
     (\
@@ -256,7 +256,7 @@ namespace ayc
         std::stacktrace::current()\
     )
 
-// HRESULT ‚ ‚è‚Å GeneralError ‚ğ¶¬‚·‚é
+// HRESULT ã‚ã‚Šã§ GeneralError ã‚’ç”Ÿæˆã™ã‚‹
 #define MAKE_GENERAL_ERROR_FROM_HRESULT(description, hresultValue) \
     ayc::MakeGeneralErrorFromHresult\
     (\
@@ -267,7 +267,7 @@ namespace ayc
         std::stacktrace::current()\
     )
 
-// C++ —áŠO‚ ‚è‚Å GeneralError ‚ğ¶¬‚·‚é
+// C++ ä¾‹å¤–ã‚ã‚Šã§ GeneralError ã‚’ç”Ÿæˆã™ã‚‹
 #define MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION(description, raisedException) \
     ayc::MakeGeneralErrorFromCppException\
     (\
@@ -278,7 +278,7 @@ namespace ayc
         std::stacktrace::current()\
     )
 
-// WinRT —áŠO‚ ‚è‚Å GeneralError ‚ğ¶¬‚·‚é
+// WinRT ä¾‹å¤–ã‚ã‚Šã§ GeneralError ã‚’ç”Ÿæˆã™ã‚‹
 #define MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION(description, raisedException) \
     ayc::MakeGeneralErrorFromWinRTException\
     (\
@@ -288,3 +288,5 @@ namespace ayc
         raisedException,\
         std::stacktrace::current()\
     )
+
+

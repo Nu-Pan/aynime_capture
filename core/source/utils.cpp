@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+п»ї//-----------------------------------------------------------------------------
 // Include
 //-----------------------------------------------------------------------------
 
@@ -18,14 +18,14 @@ namespace py = pybind11;
 // std
 //-----------------------------------------------------------------------------
 
-// Њ»ЌЭЋћЌЏ‚р QPC ‚©‚з“ѕ‚й
+// зЏѕењЁж™‚е€»г‚’ QPC гЃ‹г‚‰еѕ—г‚‹
 ayc::TimeSpan ayc::NowFromQPC()
 {
-    // TimeSpan ‚М•Є‰р”\
+    // TimeSpan гЃ®е€†и§ЈиѓЅ
     static_assert(ayc::TimeSpan::period::num == 1);
     constexpr auto TIME_SPAN_FREQ = static_cast<LONGLONG>(ayc::TimeSpan::period::den);
 
-    // ‹N“®Њг‚ё‚Б‚Ж€к’и‚И‚М‚ЕЃA€к“x‚ѕ‚ЇЋж“ѕ‚µ‚ДѓLѓѓѓbѓVѓ…
+    // иµ·е‹•еѕЊгЃљгЃЈгЃЁдёЂе®љгЃЄгЃ®гЃ§гЂЃдёЂеє¦гЃ гЃ‘еЏ–еѕ—гЃ—гЃ¦г‚­гѓЈгѓѓг‚·гѓҐ
     static const LONGLONG s_qpcFreq = [] {
         LARGE_INTEGER f{};
         const BOOL result = ::QueryPerformanceFrequency(&f);
@@ -35,14 +35,14 @@ ayc::TimeSpan ayc::NowFromQPC()
         }
         return f.QuadPart;
     }();
-    // QPC ЋћЌЏ‚рЋж“ѕ
+    // QPC ж™‚е€»г‚’еЏ–еѕ—
     const LONGLONG qpcCounter = []()
     {
         LARGE_INTEGER c{};
         ::QueryPerformanceCounter(&c);
         return c.QuadPart;
     }();
-    // TimeSpan ‚Й•ПЉ·
+    // TimeSpan гЃ«е¤‰жЏ›
     const LONGLONG ticks = [&](){
         if (TIME_SPAN_FREQ == s_qpcFreq)
         {
@@ -51,7 +51,7 @@ ayc::TimeSpan ayc::NowFromQPC()
         else
         {
             /* @note:
-                •Ѓ’К‚ЙЊvЋZ‚·‚й‚Ж 64bit ‚МЏгЊА‚©‚з€м‚к‚Д‚µ‚Ь‚¤‚М‚ЕЃAЏ¤‚ЖЏи—]‚Й•Є‚Ї‚ДЊvЋZ‚·‚йЃB
+                ж™®йЂљгЃ«иЁ€з®—гЃ™г‚‹гЃЁ 64bit гЃ®дёЉй™ђгЃ‹г‚‰жєўг‚ЊгЃ¦гЃ—гЃѕгЃ†гЃ®гЃ§гЂЃе•†гЃЁе‰°дЅ™гЃ«е€†гЃ‘гЃ¦иЁ€з®—гЃ™г‚‹гЂ‚
             */
             const LONGLONG wholeSeconds = qpcCounter / s_qpcFreq;
             const LONGLONG remainCounts = qpcCounter % s_qpcFreq;
@@ -70,7 +70,7 @@ ayc::TimeSpan ayc::NowFromQPC()
 
 std::string ayc::hresult_to_string(HRESULT hresultValue)
 {
-    // ђа–ѕ•¶Ћљ—с‚р–в‚ўЌ‡‚н‚№‚й
+    // иЄ¬жЋж–‡е­—е€—г‚’е•ЏгЃ„еђ€г‚ЏгЃ›г‚‹
     wchar_t* pWideMessageBuffer = nullptr;
     const DWORD wideMessageLength = FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -78,15 +78,15 @@ std::string ayc::hresult_to_string(HRESULT hresultValue)
         hresultValue,
         0,
         /* @note:
-            FORMAT_MESSAGE_ALLOCATE_BUFFER ‚МЏкЌ‡‚Нѓ_ѓuѓ‹ѓ|ѓCѓ“ѓ^‚р“n‚·‚М‚Єђі‚µ‚ўЃB
-            ‚µ‚©‚µЃAЉЦђ”ѓVѓOѓlѓ`ѓѓ‚Нѓ|ѓCѓ“ѓ^‚М‚Ь‚ЬЃB
-            ‚Ж‚ў‚¤‚±‚Ж‚Е reinterpret_cast ‚Е–і—ќ‚в‚и’Тел‚рЌ‡‚н‚№‚йЃB
+            FORMAT_MESSAGE_ALLOCATE_BUFFER гЃ®е ґеђ€гЃЇгѓЂгѓ–гѓ«гѓќг‚¤гѓіг‚їг‚’жёЎгЃ™гЃ®гЃЊж­ЈгЃ—гЃ„гЂ‚
+            гЃ—гЃ‹гЃ—гЂЃй–ўж•°г‚·г‚°гѓЌгѓЃгѓЈгЃЇгѓќг‚¤гѓіг‚їгЃ®гЃѕгЃѕгЂ‚
+            гЃЁгЃ„гЃ†гЃ“гЃЁгЃ§ reinterpret_cast гЃ§з„Ўзђ†г‚„г‚Љиѕ»и¤„г‚’еђ€г‚ЏгЃ›г‚‹гЂ‚
         */
         reinterpret_cast<wchar_t*>(&pWideMessageBuffer),
         0,
         nullptr
     );
-    // UTF-8 ‚Й•ПЉ·
+    // UTF-8 гЃ«е¤‰жЏ›
     std::string hresultMessage;
     if (wideMessageLength && pWideMessageBuffer)
     {
@@ -106,13 +106,13 @@ std::string ayc::hresult_to_string(HRESULT hresultValue)
     {
         hresultMessage = "Unknown Error";
     }
-    // Ћg—pЌП‚Эѓoѓbѓtѓ@‚р‰р•ъ
+    // дЅїз”Ёжё€гЃїгѓђгѓѓгѓ•г‚Ўг‚’и§Јж”ѕ
     if (pWideMessageBuffer)
     {
         LocalFree(pWideMessageBuffer);
         pWideMessageBuffer = nullptr;
     }
-    // “З‚Э‚в‚·‚­ѓtѓHЃ[ѓ}ѓbѓg‚µ‚Д•Ф‚·
+    // иЄ­гЃїг‚„гЃ™гЃЏгѓ•г‚©гѓјгѓћгѓѓгѓ€гЃ—гЃ¦иї”гЃ™
     return std::format(
         "{}(0x{:08X})",
         hresultMessage,
@@ -194,3 +194,5 @@ void ayc::ThrowGeneralErrorAsPython(const ayc::GeneralError& e)
     PyErr_SetObject(PyExc_RuntimeError, payload.ptr());
     throw py::error_already_set();
 }
+
+

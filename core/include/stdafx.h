@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 // Python
 #include <pybind11/pybind11.h>
@@ -52,8 +52,8 @@ namespace ayc
 
 	// Foundation IInspectable
 	/* @note:
-		‚Q‚Â‚Ì–¼‘O‹óŠÔ‚É IInspectable ‚ª‹‚é‚ªAƒRƒCƒcƒ‰‚Í‘¼lB
-		”ñí‚É•´‚ç‚í‚µ‚¢‚Ì‚ÅA‚±‚±‚Å‹æ•Ê‰Â”\‚È•Ê–¼‚ğì‚éB
+		ï¼’ã¤ã®åå‰ç©ºé–“ã« IInspectable ãŒå±…ã‚‹ãŒã€ã‚³ã‚¤ãƒ„ãƒ©ã¯ä»–äººã€‚
+		éå¸¸ã«ç´›ã‚‰ã‚ã—ã„ã®ã§ã€ã“ã“ã§åŒºåˆ¥å¯èƒ½ãªåˆ¥åã‚’ä½œã‚‹ã€‚
 	*/
 	typedef ::IInspectable GlobalIIInspectable;
 	typedef winrt::Windows::Foundation::IInspectable WinRTIInspectable;
@@ -76,4 +76,6 @@ namespace ayc
 }
 
 namespace py = pybind11;
+
+
 

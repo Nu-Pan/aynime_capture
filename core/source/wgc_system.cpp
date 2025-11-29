@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------------
 // Include
 //-----------------------------------------------------------------------------
 
@@ -26,16 +26,16 @@ namespace
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// ‰Šú‰»
+// åˆæœŸåŒ–
 void ayc::Initialize()
 {
-    // ‰Šú‰»Ï‚İ‚È‚çƒXƒLƒbƒv
+    // åˆæœŸåŒ–æ¸ˆã¿ãªã‚‰ã‚¹ã‚­ãƒƒãƒ—
     if (s_d3dDevice)
     {
         return;
     }
 
-    // WinRT ‰Šú‰»
+    // WinRT åˆæœŸåŒ–
     {
         try
         {
@@ -47,25 +47,25 @@ void ayc::Initialize()
         }
     }
 
-    // •K—v‹@”\‚ª–¢ƒTƒ|[ƒg‚È‚çƒGƒ‰[
+    // å¿…è¦æ©Ÿèƒ½ãŒæœªã‚µãƒãƒ¼ãƒˆãªã‚‰ã‚¨ãƒ©ãƒ¼
     if (!GraphicsCaptureSession::IsSupported())
     {
         Finalize();
         throw MAKE_GENERAL_ERROR("GraphicsCaptureSession is not Supported.");
     }
 
-    // D3D11 ƒfƒoƒCƒX¶¬
+    // D3D11 ãƒ‡ãƒã‚¤ã‚¹ç”Ÿæˆ
     {
-        // ƒtƒ‰ƒO
+        // ãƒ•ãƒ©ã‚°
         const UINT flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
-        // ‹@”\ƒŒƒxƒ‹
+        // æ©Ÿèƒ½ãƒ¬ãƒ™ãƒ«
         D3D_FEATURE_LEVEL levels[] = {
             D3D_FEATURE_LEVEL_11_1,
             D3D_FEATURE_LEVEL_11_0,
         };
 
-        // ‰Šú‰»
+        // åˆæœŸåŒ–
         D3D_FEATURE_LEVEL chosen{};
         const HRESULT result = D3D11CreateDevice(
             /*pAdapter=*/nullptr,
@@ -85,7 +85,7 @@ void ayc::Initialize()
             throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to D3D11CreateDevice.", result);
         }
     }
-    // WinRT ƒfƒoƒCƒX¶¬
+    // WinRT ãƒ‡ãƒã‚¤ã‚¹ç”Ÿæˆ
     {
         auto dxgiDevice = s_d3dDevice.as<IDXGIDevice>();
         const HRESULT result = CreateDirect3D11DeviceFromDXGIDevice(
@@ -101,15 +101,15 @@ void ayc::Initialize()
 }
 
 //-----------------------------------------------------------------------------
-// Œãn––
+// å¾Œå§‹æœ«
 void ayc::Finalize()
 {
-    // ŠeƒCƒ“ƒXƒ^ƒ“ƒX‚ğ‰ğ•ú
+    // å„ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã‚’è§£æ”¾
     s_wrtDevice = nullptr;
     s_d3dContext = nullptr;
     s_d3dDevice = nullptr;
 
-    // WinRT ‚àŒãn––
+    // WinRT ã‚‚å¾Œå§‹æœ«
     winrt::clear_factory_cache();
     winrt::uninit_apartment();
 }
@@ -134,3 +134,4 @@ const ayc::IDirect3DDevice& ayc::WRTDevice()
 {
     return s_wrtDevice;
 }
+

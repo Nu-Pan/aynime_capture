@@ -1,4 +1,4 @@
-//-----------------------------------------------------------------------------
+ï»¿//-----------------------------------------------------------------------------
 // Include
 //-----------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
 , m_captureSession(nullptr)
 , m_frameBuffer(holdInSec)
 {
-    // ƒLƒƒƒvƒ`ƒƒƒAƒCƒeƒ€¶¬
+    // ã‚­ãƒ£ãƒ—ãƒãƒ£ã‚¢ã‚¤ãƒ†ãƒ ç”Ÿæˆ
     GraphicsCaptureItem captureItem{ nullptr };
     {
         auto interop = winrt::get_activation_factory<GraphicsCaptureItem, IGraphicsCaptureItemInterop>();
@@ -42,27 +42,27 @@ ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
             throw MAKE_GENERAL_ERROR("captureItem is Invalid");
         }
     }
-    // ƒtƒŒ[ƒ€ƒv[ƒ‹¶¬
-    // @note: ‚±‚Ì’iŠK‚Å‚ÍƒAƒ‹ƒtƒ@‚ğØ‚é‚±‚Æ‚Í‚Å‚«‚È‚¢
+    // ãƒ•ãƒ¬ãƒ¼ãƒ ãƒ—ãƒ¼ãƒ«ç”Ÿæˆ
+    // @note: ã“ã®æ®µéšã§ã¯ã‚¢ãƒ«ãƒ•ã‚¡ã‚’åˆ‡ã‚‹ã“ã¨ã¯ã§ããªã„
     m_framePool = Direct3D11CaptureFramePool::CreateFreeThreaded(
         WRTDevice(),
         DirectXPixelFormat::B8G8R8A8UIntNormalized,
         2,
         captureItem.Size()
     );
-    // ƒnƒ“ƒhƒ‰“o˜^
+    // ãƒãƒ³ãƒ‰ãƒ©ç™»éŒ²
     m_revoker = m_framePool.FrameArrived(
         winrt::auto_revoke,
         { this, &WGCSession::OnFrameArrived }
     );
-    // ƒZƒbƒVƒ‡ƒ“¶¬
+    // ã‚»ãƒƒã‚·ãƒ§ãƒ³ç”Ÿæˆ
     m_captureSession = m_framePool.CreateCaptureSession(captureItem);
     {
         m_captureSession.IsCursorCaptureEnabled(false);
         m_captureSession.IsBorderRequired(false);
         m_captureSession.StartCapture();
     }
-    // ƒXƒe[ƒgØ‚è‘Ö‚¦
+    // ã‚¹ãƒ†ãƒ¼ãƒˆåˆ‡ã‚Šæ›¿ãˆ
     {
         m_isRunning = true;
     }
@@ -77,25 +77,25 @@ ayc::WGCSession::~WGCSession()
 //-----------------------------------------------------------------------------
 void ayc::WGCSession::Close()
 {
-    // ƒXƒe[ƒgØ‚è‘Ö‚¦
+    // ã‚¹ãƒ†ãƒ¼ãƒˆåˆ‡ã‚Šæ›¿ãˆ
     {
         m_isRunning = false;
     }
-    // ƒZƒbƒVƒ‡ƒ“I—¹
+    // ã‚»ãƒƒã‚·ãƒ§ãƒ³çµ‚äº†
     if (m_captureSession)
     {
         m_captureSession.Close();
     }
-    // ƒCƒxƒ“ƒg“o˜^‰ğœ
+    // ã‚¤ãƒ™ãƒ³ãƒˆç™»éŒ²è§£é™¤
     {
         m_revoker.revoke();
     }
-    // ƒtƒŒ[ƒ€ƒv[ƒ‹I—¹
+    // ãƒ•ãƒ¬ãƒ¼ãƒ ãƒ—ãƒ¼ãƒ«çµ‚äº†
     if (m_framePool)
     {
         m_framePool.Close();
     }
-    // ƒtƒŒ[ƒ€ƒoƒbƒtƒ@ƒNƒŠƒA
+    // ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã‚¯ãƒªã‚¢
     {
         m_frameBuffer.Clear();
     }
@@ -130,14 +130,14 @@ void ayc::WGCSession::OnFrameArrived(
     const WinRTIInspectable& args
 )
 {
-    // uŒ»İv‚ğŠm’è‚³‚¹‚é
+    // ã€Œç¾åœ¨ã€ã‚’ç¢ºå®šã•ã›ã‚‹
     const TimeSpan nowInTS = []() {
         return NowFromQPC();
     }();
-    // ƒtƒŒ[ƒ€‚ğæ“¾
+    // ãƒ•ãƒ¬ãƒ¼ãƒ ã‚’å–å¾—
     /* @note:
-        Œ»İ“’…‚µ‚Ä‚¢‚é’†‚ÅÅV‚Ì‚PƒtƒŒ[ƒ€‚¾‚¯‚ğg‚¢A‚»‚êˆÈŠO‚Í“Ç‚İÌ‚Ä‚éB
-        ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚ğƒ}ƒ‚ÉƒNƒŠ[ƒ“ƒiƒbƒv‚µ‚½‚¢‚Ì‚ÅAƒtƒŒ[ƒ€‚ª–³‚¢ê‡‚àˆ—Œp‘±B
+        ç¾åœ¨åˆ°ç€ã—ã¦ã„ã‚‹ä¸­ã§æœ€æ–°ã®ï¼‘ãƒ•ãƒ¬ãƒ¼ãƒ ã ã‘ã‚’ä½¿ã„ã€ãã‚Œä»¥å¤–ã¯èª­ã¿æ¨ã¦ã‚‹ã€‚
+        ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã‚’ãƒãƒ¡ã«ã‚¯ãƒªãƒ¼ãƒ³ãƒŠãƒƒãƒ—ã—ãŸã„ã®ã§ã€ãƒ•ãƒ¬ãƒ¼ãƒ ãŒç„¡ã„å ´åˆã‚‚å‡¦ç†ç¶™ç¶šã€‚
     */
     const Direct3D11CaptureFrame frame = [&]()
     {
@@ -152,7 +152,7 @@ void ayc::WGCSession::OnFrameArrived(
             f_ret = f_peek;
         }
     }();
-    // CaptureFramePool ƒoƒbƒNƒoƒbƒtƒ@‚Ì D3D11 ƒeƒNƒXƒ`ƒƒ‚ğæ“¾
+    // CaptureFramePool ãƒãƒƒã‚¯ãƒãƒƒãƒ•ã‚¡ã® D3D11 ãƒ†ã‚¯ã‚¹ãƒãƒ£ã‚’å–å¾—
     com_ptr<ID3D11Texture2D> cfpTex;
     if (frame)
     {
@@ -167,7 +167,7 @@ void ayc::WGCSession::OnFrameArrived(
             throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to GetInterface", result);
         }
     }
-    // ƒtƒŒ[ƒ€ƒoƒbƒtƒ@—p‚ÉƒeƒNƒXƒ`ƒƒ‚ÌƒRƒs[‚ğæ‚é
+    // ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ç”¨ã«ãƒ†ã‚¯ã‚¹ãƒãƒ£ã®ã‚³ãƒ”ãƒ¼ã‚’å–ã‚‹
     com_ptr<ID3D11Texture2D> fbTex;
     if (cfpTex)
     {
@@ -176,7 +176,7 @@ void ayc::WGCSession::OnFrameArrived(
         {
             cfpTex->GetDesc(&desc);
         }
-        // ¶¬
+        // ç”Ÿæˆ
         {
             const HRESULT result = ayc::D3DDevice()->CreateTexture2D(
                 &desc,
@@ -188,13 +188,15 @@ void ayc::WGCSession::OnFrameArrived(
                 throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateTexture2D", result);
             }
         }
-        // ƒRƒs[
+        // ã‚³ãƒ”ãƒ¼
         {
             ayc::D3DContext()->CopyResource(fbTex.get(), cfpTex.get());
         }
     }
-    // ƒtƒŒ[ƒ€ƒoƒbƒtƒ@‚É‹l‚ß‚é
+    // ãƒ•ãƒ¬ãƒ¼ãƒ ãƒãƒƒãƒ•ã‚¡ã«è©°ã‚ã‚‹
     {
         m_frameBuffer.PushFrame(fbTex, frame.SystemRelativeTime());
     }
 }
+
+
