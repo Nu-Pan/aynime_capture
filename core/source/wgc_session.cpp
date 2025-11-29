@@ -13,12 +13,71 @@
 #include "utils.h"
 
 //-----------------------------------------------------------------------------
+// Link-Local Definitions
+//-----------------------------------------------------------------------------
+namespace
+{
+    // フレームプールのバックバッファの枚数
+    const std::int32_t WGC_FRAME_POOL_NUM_BUFFERS = 3;
+
+    // 最適なフレームサイズを計算する
+    ayc::SizeInt32 _ResolveOptimalFrameSize
+    (
+        ayc::SizeInt32 sourceSize,
+        std::optional<std::size_t> maxWidth,
+        std::optional<std::size_t> maxHeight
+    )
+    {
+        // スケールを計算
+        /* @note:
+            縮小はするが、拡大はしない。
+            画像全体が maxSize の枠内に収まるようにする。
+            指定がなければ等倍。
+        */
+        double widthScale = 1.0;
+        if (maxWidth.has_value())
+        {
+            widthScale = std::min(
+                1.0,
+                static_cast<double>(maxWidth.value()) / static_cast<double>(sourceSize.Width)
+            );
+        }
+        double heightScale = 1.0;
+        if (maxHeight.has_value())
+        {
+            heightScale = std::min(
+                1.0,
+                static_cast<double>(maxHeight.value()) / static_cast<double>(sourceSize.Height)
+            );
+        }
+        const auto mergedScale = std::min(
+            widthScale,
+            heightScale
+        );
+        // 最終的なサイズを返す
+        return ayc::SizeInt32
+        {
+            std::lround(mergedScale * static_cast<double>(sourceSize.Width)),
+            std::lround(mergedScale * static_cast<double>(sourceSize.Height)),
+        };
+    }
+}
+
+//-----------------------------------------------------------------------------
 // CaptureSession
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
-: m_isRunning(false)
+ayc::WGCSession::WGCSession(
+    HWND hwnd,
+    double holdInSec,
+    std::optional<std::size_t> maxWidth,
+    std::optional<std::size_t> maxHeight
+)
+: m_maxWidth(maxWidth)
+, m_maxHeight(maxHeight)
+, m_isRunning(false)
+, m_latestContentSize()
 , m_framePool(nullptr)
 , m_revoker()
 , m_captureSession(nullptr)
@@ -43,13 +102,17 @@ ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
             throw MAKE_GENERAL_ERROR("captureItem is Invalid");
         }
     }
+    // 想定フレームサイズを保存
+    {
+        m_latestContentSize = captureItem.Size();
+    }
     // フレームプール生成
     // @note: この段階ではアルファを切ることはできない
     m_framePool = Direct3D11CaptureFramePool::CreateFreeThreaded(
         WRTDevice(),
         DirectXPixelFormat::B8G8R8A8UIntNormalized,
-        3,
-        captureItem.Size()
+        WGC_FRAME_POOL_NUM_BUFFERS,
+        _ResolveOptimalFrameSize(captureItem.Size(), m_maxWidth, m_maxHeight)
     );
     // ハンドラ登録
     m_revoker = m_framePool.FrameArrived(
@@ -135,7 +198,7 @@ void ayc::WGCSession::OnFrameArrived(
     // 「現在」を確定させる
     const TimeSpan nowInTS = []() {
         return NowFromQPC();
-    }();
+        }();
     // フレームを取得
     /* @note:
         現在到着している中で最新の１フレームだけを使い、それ以外は読み捨てる。
@@ -154,9 +217,46 @@ void ayc::WGCSession::OnFrameArrived(
             f_ret = f_peek;
         }
     }();
+    if (!frame)
+    {
+        return;
+    }
+    // ウィンドウのサイズ変更をハンドル
+    /*
+    @note:
+        前提として、パフォーマンスをできるだけ稼ぎたいので、
+        より上流側であるフレームプールの HW スケーリングを使いたい。
+        よって、サイズ変更が来たら今回までのフレームをすべて捨てて、
+        次以降のフレームを有効とみなす。
+    @note:
+        ContentSize はフレームプールによるスケールがかかる前のサイズなので注意。
+        オリジナルのウィンドウサイズということ。
+    */
+    const auto contentSize = frame.ContentSize();
+    if(
+        contentSize.Width != m_latestContentSize.Width ||
+        contentSize.Height != m_latestContentSize.Height
+    )
+    {
+        // フレームプールを再生成
+        m_framePool.Recreate(
+            WRTDevice(),
+            DirectXPixelFormat::B8G8R8A8UIntNormalized,
+            WGC_FRAME_POOL_NUM_BUFFERS,
+            _ResolveOptimalFrameSize(contentSize, m_maxWidth, m_maxHeight)
+        );
+        // サイズ情報を更新
+        {
+            m_latestContentSize = contentSize;
+        }
+        // フレームをクリア
+        {
+            m_frameBuffer.Clear();
+        }
+        return;
+    }
     // CaptureFramePool バックバッファの D3D11 テクスチャを取得
     com_ptr<ID3D11Texture2D> cfpTex;
-    if (frame)
     {
         const auto surface = frame.Surface();
         const com_ptr<IDirect3DDxgiInterfaceAccess> access = surface.as<IDirect3DDxgiInterfaceAccess>();
@@ -171,7 +271,6 @@ void ayc::WGCSession::OnFrameArrived(
     }
     // フレームバッファ用にテクスチャのコピーを取る
     com_ptr<ID3D11Texture2D> fbTex;
-    if (cfpTex)
     {
         // desc
         D3D11_TEXTURE2D_DESC desc{};

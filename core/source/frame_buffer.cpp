@@ -81,18 +81,11 @@ void ayc::FrameBuffer::PushFrame(
 		return NowFromQPC();
 	}();
 	// バッファにフレームを追加＆バッファから賞味期限切れのフレームを削除
-	/* @note:
-		必ず何某かのフレームが１つは返るようにしたいので、１フレームは残す。
-	*/
 	{
 		std::scoped_lock<std::mutex> lock(m_guard);
 		m_impl.emplace_back(FRAME{ pTexture, timeSpan });
 		for (;;)
 		{
-			if (m_impl.size() <= 1)
-			{
-				break;
-			}
 			const double frontRelativeInSec = toDurationInSec(nowInTS, m_impl.front().timeSpan);
 			if (frontRelativeInSec <= m_holdInSec)
 			{
@@ -116,7 +109,7 @@ ayc::com_ptr<ID3D11Texture2D> ayc::FrameBuffer::GetFrame(double relativeInSec) c
 		std::scoped_lock<std::mutex> lock(m_guard);
 		if (m_impl.empty())
 		{
-			throw MAKE_GENERAL_ERROR("FrameBuffer is Empty");
+			return ayc::com_ptr<ID3D11Texture2D>(nullptr);
 		}
 		result = *_FindMinElement(
 			m_impl.cbegin(),
@@ -160,10 +153,6 @@ ayc::FreezedFrameBuffer::FreezedFrameBuffer(
 		frameBuffer.m_holdInSec
 	);
 	// 範囲内のフレームを抽出
-	/* @note:
-		FrameBuffer の挙動（必ず１枚は有効なフレームが存在する）と揃えたいので、
-		ここでも最低でも１フレームは返す。
-	*/
 	{
 		std::scoped_lock<std::mutex> lock(frameBuffer.m_guard);
 		auto& srcImpl = frameBuffer.m_impl;
@@ -175,12 +164,6 @@ ayc::FreezedFrameBuffer::FreezedFrameBuffer(
 			{
 				continue;
 			}
-			m_impl.emplace_back(FRAME{ frame.pTexture, relativeInSec });
-		}
-		if (m_impl.empty() and !srcImpl.empty())
-		{
-			const auto frame = srcImpl.back();
-			const auto relativeInSec = toDurationInSec(nowInTS, frame.timeSpan);
 			m_impl.emplace_back(FRAME{ frame.pTexture, relativeInSec });
 		}
 	}

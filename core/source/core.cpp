@@ -33,7 +33,12 @@ namespace ayc
 
     public:
         //---------------------------------------------------------------------
-        Session(uintptr_t hwnd, double holdInSec)
+        Session(
+            uintptr_t hwnd,
+            double holdInSec,
+            std::optional<std::size_t> maxWidth,
+            std::optional<std::size_t> maxHeight
+        )
         : m_pWGCSession()
         {
             // システム初期化
@@ -43,7 +48,7 @@ namespace ayc
             // セッション開始
             {
                 m_pWGCSession.reset(
-                    new ayc::WGCSession(reinterpret_cast<HWND>(hwnd), holdInSec)
+                    new ayc::WGCSession(reinterpret_cast<HWND>(hwnd), holdInSec, maxWidth, maxHeight)
                 );
             }
         }
@@ -84,10 +89,18 @@ namespace ayc
                 throw MAKE_GENERAL_ERROR("Session Already Stopped");
             }
             // テクスチャを取得
+            /* @note:
+                フレームバッファが空の場合は普通にありえるので、
+                例外ではなく空バイト列で対応する。
+            */
             const auto& srcTex = m_pWGCSession->CopyFrame(timeInSec);
             if (!srcTex)
             {
-                throw MAKE_GENERAL_ERROR("Failed to ayc::WGCSession::CopyFrame");
+                return py::make_tuple(
+                    0,
+                    0,
+                    py::bytes("")
+                );
             }
             // テクスチャを読み出し
             std::size_t width;
@@ -147,6 +160,17 @@ namespace ayc
             const auto rawFrameBuffer = pWGCSession->CopyFrameBuffer(
                 requestRawDurationInSec
             );
+            // フレームバッファが空の場合
+            /* @note:
+                fps 指定がある場合のフローに通したくないので、
+                適当にクリアして早期リターンする。
+            */
+            if (rawFrameBuffer.GetSize() < 1)
+            {
+                m_indexUserToRaw.clear();
+                m_pAsyncTextureReadback.reset();
+                return;
+            }
             // 「ユーザー --> 生」のインデックスマップを解決
             /* @note:
                 諸々の処理をした最終的なフレームバッファは、
@@ -347,13 +371,17 @@ PYBIND11_MODULE(_aynime_capture, m) {
     // Session
     py::class_<ayc::Session>(m, "Session", py::module_local())
         .def(
-            py::init<uintptr_t, double>(),
+            py::init<uintptr_t, double, std::optional<std::size_t>, std::optional<std::size_t>>(),
             py::arg("hwnd"),
             py::arg("duration_in_sec"),
+            py::arg("max_width") = py::none(),
+            py::arg("max_height") = py::none(),
             "Create a capture session for the specified window.\n\n"
             "Args:\n"
             "    hwnd: Target window handle (HWND cast to int).\n"
             "    duration_in_sec: Seconds to keep frames in the buffer."
+            "    max_width: Optional maximum capture width in pixels.\n"
+            "    max_height: Optional maximum capture height in pixels."
         )
         .def(
             "Close",

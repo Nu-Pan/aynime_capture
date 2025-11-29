@@ -8,7 +8,12 @@ namespace ayc
 	{
 	public:
 		// コンストラクタ
-		WGCSession(HWND hwnd, double holdInSec);
+		WGCSession(
+			HWND hwnd,
+			double holdInSec,
+			std::optional<std::size_t> maxWidth,
+			std::optional<std::size_t> maxHeight
+		);
 
 		// デストラクタ
 		~WGCSession();
@@ -35,8 +40,13 @@ namespace ayc
 			const WinRTIInspectable& args
 		);
 
+		// Settings
+		std::optional<std::size_t> m_maxWidth;
+		std::optional<std::size_t> m_maxHeight;
+
 		// Status
-		bool	m_isRunning;
+		bool			m_isRunning;
+		ayc::SizeInt32	m_latestContentSize;
 
 		// WinRT Objects
 		Direct3D11CaptureFramePool	m_framePool;

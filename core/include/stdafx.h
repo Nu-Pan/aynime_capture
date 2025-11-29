@@ -49,7 +49,6 @@ namespace ayc
 
 	// Foundation
 	using winrt::Windows::Foundation::TimeSpan;
-
 	// Foundation IInspectable
 	/* @note:
 		２つの名前空間に IInspectable が居るが、コイツラは他人。
@@ -57,6 +56,9 @@ namespace ayc
 	*/
 	typedef ::IInspectable GlobalIIInspectable;
 	typedef winrt::Windows::Foundation::IInspectable WinRTIInspectable;
+
+	// WinRT Graphics
+	using 	winrt::Windows::Graphics::SizeInt32;
 
 	// WinRT Graphics Capture
 	using winrt::Windows::Graphics::Capture::GraphicsCaptureItem;

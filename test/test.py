@@ -84,7 +84,7 @@ if hwnd is None:
 # セッションをスタート
 print(f"hwnd = {hwnd}")
 print(f"title = {title}")
-session = ayc.Session(hwnd, 3.0)
+session = ayc.Session(hwnd, 3.0, 640, 480)
 
 # バッファに溜まるのを待つ
 print("---- バッファが溜まるのを待ちます")

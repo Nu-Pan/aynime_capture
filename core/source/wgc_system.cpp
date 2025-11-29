@@ -134,4 +134,3 @@ const ayc::IDirect3DDevice& ayc::WRTDevice()
 {
     return s_wrtDevice;
 }
-
