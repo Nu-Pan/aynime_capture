@@ -48,7 +48,7 @@ ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
     m_framePool = Direct3D11CaptureFramePool::CreateFreeThreaded(
         WRTDevice(),
         DirectXPixelFormat::B8G8R8A8UIntNormalized,
-        2,
+        3,
         captureItem.Size()
     );
     // ハンドラ登録
@@ -61,6 +61,7 @@ ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
     {
         m_captureSession.IsCursorCaptureEnabled(false);
         m_captureSession.IsBorderRequired(false);
+        m_captureSession.IncludeSecondaryWindows(false);
         m_captureSession.StartCapture();
     }
     // ステート切り替え
