@@ -102,11 +102,11 @@ width, height, frame_bytes = session.GetFrameByTime(0.1)
 
 # PIL 画像化
 pil_image = Image.frombuffer(
-    "RGBA",
+    "RGB",
     (width, height),
     frame_bytes,
     "raw",
-    "BGRA",
+    "BGR",
     0,
     1
 )
@@ -135,11 +135,11 @@ with ayc.Snapshot(session, 25, 3.0) as snapshot:
     for frame_index in range(snapshot.size):
         width, height, frame_bytes = snapshot.GetFrame(frame_index)
         pil_image = Image.frombuffer(
-            "RGBA",
+            "RGB",
             (width, height),
             frame_bytes,
             "raw",
-            "BGRA",
+            "BGR",
             0,
             1
         )

@@ -66,7 +66,7 @@ void ayc::ReadbackTexture(
         // エイリアス
         const UINT width = srcDesc.Width;
         const UINT height = srcDesc.Height;
-        const size_t bytesPerPixel = 4;
+        const size_t bytesPerPixel = 3;
         const size_t rowSizeInBytes = width * bytesPerPixel;
         const size_t bufferSizeInBytes = rowSizeInBytes * height;
 
@@ -80,16 +80,24 @@ void ayc::ReadbackTexture(
             }
         }
         // コピー
-        outBuffer.resize(bufferSizeInBytes);
-        auto const pDstBegin = reinterpret_cast<std::uint8_t*>(outBuffer.data());
-        const auto* pSrcBegin = static_cast<const std::uint8_t*>(mapped.pData);
-        for (UINT v = 0; v < height; ++v)
+        // @note: ここでアルファを捨てる
         {
-            std::memcpy(
-                pDstBegin + (v * rowSizeInBytes),
-                pSrcBegin + (v * mapped.RowPitch),
-                rowSizeInBytes
-            );
+            outBuffer.resize(bufferSizeInBytes);
+            auto const pDstBase = reinterpret_cast<std::uint8_t*>(outBuffer.data());
+            const auto* const pSrcBase = static_cast<const std::uint8_t*>(mapped.pData);
+            for (UINT v = 0; v < height; ++v)
+            {
+                auto* pDst = pDstBase + (v * rowSizeInBytes);
+                const auto* pSrc = pSrcBase + (v * mapped.RowPitch);
+                for (UINT u = 0; u < width; ++u)
+                {
+                    pDst[0] = pSrc[0];
+                    pDst[1] = pSrc[1];
+                    pDst[2] = pSrc[2];
+                    pDst += 3;
+                    pSrc += 4;
+                }
+            }
         }
         // アンマップ
         {

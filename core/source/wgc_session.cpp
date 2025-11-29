@@ -43,6 +43,7 @@ ayc::WGCSession::WGCSession(HWND hwnd, double holdInSec)
         }
     }
     // フレームプール生成
+    // @note: この段階ではアルファを切ることはできない
     m_framePool = Direct3D11CaptureFramePool::CreateFreeThreaded(
         WRTDevice(),
         DirectXPixelFormat::B8G8R8A8UIntNormalized,
