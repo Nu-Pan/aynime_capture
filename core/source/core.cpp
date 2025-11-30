@@ -60,9 +60,9 @@ namespace ayc
         void Close()
         {
             /* @note:
-                python は GC なので shared_ptr の参照カウントは仮定できない。
-                しかし、確実にセッションを止めないといけない。
-                なので、参照を切る前に明示的に Close を呼び出す。
+                新しくセッションを作成する前に、不要になったセッションを確実に止めたい。
+                しかし python は GC なので shared_ptr の参照カウントはアテにできない。
+                なので、明示的セッションを指定できるように Close を用意した。
             */
             if (m_pWGCSession)
             {
@@ -79,22 +79,37 @@ namespace ayc
                 呼び出されたらなるはやでフレームを返さないといけない。
                 よって、この関数内で必要なすべてを実行しきる。
             */
-            /* TODO
-                - 転送中は GIL 切れるらしい？
-                - アルファチャンネルいらない
-            */
-            // セッションが停止済みならエラー
-            if (!m_pWGCSession)
-            {
-                throw MAKE_GENERAL_ERROR("Session Already Stopped");
-            }
-            // テクスチャを取得
             /* @note:
                 フレームバッファが空の場合は普通にありえるので、
-                例外ではなく空バイト列で対応する。
+                例外ではなく None で呼び出し元に通知する。
             */
-            const auto& srcTex = m_pWGCSession->CopyFrame(timeInSec);
-            if (!srcTex)
+            // GIL Released
+            std::size_t width = 0;
+            std::size_t height = 0;
+            std::string textureBuffer = "";
+            {
+                // テクスチャコピーはまぁまぁ重いはずなので GIL 解放
+                py::gil_scoped_release gilRelease;
+
+                // セッションが停止済みならエラー
+                if (!m_pWGCSession)
+                {
+                    throw MAKE_GENERAL_ERROR("Session Already Stopped");
+                }
+                // テクスチャを取得
+                const auto srcTex = m_pWGCSession->CopyFrame(timeInSec);
+                if (srcTex)
+                {
+                    ReadbackTexture(
+                        width,
+                        height,
+                        textureBuffer,
+                        srcTex
+                    );
+                }
+            }
+            // python オブジェクトを返す
+            if (textureBuffer.empty())
             {
                 return py::make_tuple(
                     py::none(),
@@ -102,22 +117,14 @@ namespace ayc
                     py::none()
                 );
             }
-            // テクスチャを読み出し
-            std::size_t width;
-            std::size_t height;
-            std::string textureBuffer;
-            ReadbackTexture(
-                width,
-                height,
-                textureBuffer,
-                srcTex
-            );
-            // bytes に変換して終了
-            return py::make_tuple(
-                width,
-                height,
-                py::bytes(textureBuffer)
-            );
+            else
+            {
+                return py::make_tuple(
+                    width,
+                    height,
+                    py::bytes(textureBuffer)
+                );
+            }
         }
 
     private:
@@ -135,6 +142,8 @@ namespace ayc
         Snapshot(Session session, std::optional<double> fps, std::optional<double> durationInSec)
         : m_pAsyncTextureReadback()
         {
+            py::gil_scoped_release gilRelease;
+
             // WGC セッションを解決
             const auto& pWGCSession = session.m_pWGCSession;
             if (!pWGCSession)
@@ -283,6 +292,11 @@ namespace ayc
         //---------------------------------------------------------------------
         void Exit()
         {
+            /* @note:
+                AsyncTextureReadback の解放時に非同期処理待機がある。
+                まぁまぁ待たされるかもなので GIL を解放。
+            */
+            py::gil_scoped_release gilRelease;
             m_indexUserToRaw.clear();
             m_pAsyncTextureReadback.reset();
         }
@@ -296,15 +310,27 @@ namespace ayc
         //---------------------------------------------------------------------
         py::tuple GetFrameBuffer(std::size_t frameIndex) const
         {
-            if (!m_pAsyncTextureReadback)
+            // GIL Released
+            ayc::AsyncTextureReadback::RESULT result;
             {
-                throw MAKE_GENERAL_ERROR("Snapshot Already Destructed");
+                // @note: 非同期の転送処理の完了を待機しないとなので GIL を解放
+                py::gil_scoped_release gilRelease;
+
+                // エラーチェック
+                if (!m_pAsyncTextureReadback)
+                {
+                    throw MAKE_GENERAL_ERROR("Snapshot Already Destructed");
+                }
+                if (frameIndex >= m_indexUserToRaw.size())
+                {
+                    throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("frameIndex Out of Bounds.", frameIndex);
+                }
+                // フレームを取得
+                {
+                    result = (*m_pAsyncTextureReadback)[m_indexUserToRaw[frameIndex]];
+                }
             }
-            if (frameIndex >= m_indexUserToRaw.size())
-            {
-                throw MAKE_GENERAL_ERROR_FROM_ANY_PARAMETER("frameIndex Out of Bounds.", frameIndex);
-            }
-            const auto result = (*m_pAsyncTextureReadback)[m_indexUserToRaw[frameIndex]];
+            // Python オブジェクトに固めて結果を返す
             return py::make_tuple(
                 result.width,
                 result.height,
