@@ -24,7 +24,11 @@ ext_modules = [
         ],
         extra_compile_args=[
             "/EHsc",
-            "/std:c++latest"
+            "/std:c++latest",
+            "/O2",
+            "/Oi"
+            "/GL",
+            "/DNDEBUG"
         ]
     )
 ]
