@@ -32,6 +32,9 @@
     <ClCompile Include="source\async_texture_readback.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="source\resize_texture.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\stdafx.h">
@@ -50,6 +53,9 @@
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\async_texture_readback.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\resize_texture.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

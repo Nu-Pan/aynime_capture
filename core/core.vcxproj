@@ -14,6 +14,7 @@
     <ClCompile Include="source\async_texture_readback.cpp" />
     <ClCompile Include="source\core.cpp" />
     <ClCompile Include="source\frame_buffer.cpp" />
+    <ClCompile Include="source\resize_texture.cpp" />
     <ClCompile Include="source\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -25,6 +26,7 @@
   <ItemGroup>
     <ClInclude Include="include\async_texture_readback.h" />
     <ClInclude Include="include\frame_buffer.h" />
+    <ClInclude Include="include\resize_texture.h" />
     <ClInclude Include="include\stdafx.h" />
     <ClInclude Include="include\utils.h" />
     <ClInclude Include="include\wgc_session.h" />
@@ -122,7 +124,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(PythonHome)libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ucrt.lib;d3d11.lib;dxgi.lib;WindowsApp.lib</AdditionalDependencies>
+      <AdditionalDependencies>ucrt.lib;d3d11.lib;dxgi.lib;d3dcompiler.lib;WindowsApp.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libucrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -145,7 +147,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <IgnoreSpecificDefaultLibraries>libucrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies>ucrt.lib;d3d11.lib;dxgi.lib;WindowsApp.lib</AdditionalDependencies>
+      <AdditionalDependencies>ucrt.lib;d3d11.lib;dxgi.lib;d3dcompiler.lib;WindowsApp.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(PythonHome)libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
