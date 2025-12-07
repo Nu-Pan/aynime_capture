@@ -12,6 +12,7 @@
 // winrt
 #include <winrt/base.h>
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.Graphics.Capture.h>
 #include <winrt/Windows.Graphics.DirectX.h>
 #include <winrt/Windows.Graphics.DirectX.Direct3D11.h>
@@ -50,6 +51,8 @@ namespace ayc
 
 	// Foundation
 	using winrt::Windows::Foundation::TimeSpan;
+	using winrt::Windows::Foundation::Metadata::ApiInformation;
+
 	// Foundation IInspectable
 	/* @note:
 		２つの名前空間に IInspectable が居るが、コイツラは他人。
@@ -59,7 +62,7 @@ namespace ayc
 	typedef winrt::Windows::Foundation::IInspectable WinRTIInspectable;
 
 	// WinRT Graphics
-	using 	winrt::Windows::Graphics::SizeInt32;
+	using winrt::Windows::Graphics::SizeInt32;
 
 	// WinRT Graphics Capture
 	using winrt::Windows::Graphics::Capture::GraphicsCaptureItem;

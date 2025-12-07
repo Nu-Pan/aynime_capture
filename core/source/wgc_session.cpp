@@ -123,9 +123,18 @@ ayc::WGCSession::WGCSession(
     // セッション生成
     m_captureSession = m_framePool.CreateCaptureSession(captureItem);
     {
-        m_captureSession.IsCursorCaptureEnabled(false);
-        m_captureSession.IsBorderRequired(false);
-        m_captureSession.IncludeSecondaryWindows(false);
+        if (ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L"IsCursorCaptureEnabled"))
+        {
+            m_captureSession.IsCursorCaptureEnabled(false);
+        }
+        if (ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L"IsBorderRequired"))
+        {
+            m_captureSession.IsBorderRequired(false);
+        }
+        if (ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L"IncludeSecondaryWindows"))
+        {
+            m_captureSession.IncludeSecondaryWindows(false);
+        }
         m_captureSession.StartCapture();
     }
     // ステート切り替え
