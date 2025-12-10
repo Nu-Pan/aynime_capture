@@ -17,6 +17,19 @@
 //-----------------------------------------------------------------------------
 // Link-Local Definitions
 //-----------------------------------------------------------------------------
+
+// GraphicsCaptureSession のメンバ呼び出しを簡略化するユーティリティ
+#define CALL_GCS_MEMBER(gcsInstance, memberName, value) \
+    { \
+        const auto isPresent = TRY_WINRT_RET( \
+            [&]() { return ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L#memberName); } \
+        ); \
+        if( isPresent ) \
+        { \
+            TRY_WINRT( [&]() { gcsInstance.memberName(value); } ); \
+        } \
+    }
+
 namespace
 {
     // フレームプールのバックバッファの枚数
@@ -146,24 +159,9 @@ ayc::WGCSession::WGCSession(
     );
     // セッションの設定を変更
     {
-        if (ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L"IsCursorCaptureEnabled"))
-        {
-            TRY_WINRT(
-                [&]() { m_captureSession.IsCursorCaptureEnabled(false); }
-            )
-        }
-        if (ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L"IsBorderRequired"))
-        {
-            TRY_WINRT(
-                [&]() { m_captureSession.IsBorderRequired(false); }
-            )
-        }
-        if (ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L"IncludeSecondaryWindows"))
-        {
-            TRY_WINRT(
-                [&]() { m_captureSession.IncludeSecondaryWindows(false); }
-            )
-        }
+        CALL_GCS_MEMBER(m_captureSession, IsCursorCaptureEnabled, false);
+        CALL_GCS_MEMBER(m_captureSession, IsBorderRequired, false);
+        CALL_GCS_MEMBER(m_captureSession, IncludeSecondaryWindows, false);
     }
     // セッション開始
     TRY_WINRT(
