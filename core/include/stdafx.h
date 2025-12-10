@@ -46,6 +46,7 @@ namespace ayc
 {
 	// WinRT
 	using winrt::com_ptr;
+	using winrt::impl::com_ref;
 	using winrt::guid_of;
 	using winrt::put_abi;
 

@@ -39,7 +39,11 @@ ayc::TimeSpan ayc::NowFromQPC()
     const LONGLONG qpcCounter = []()
     {
         LARGE_INTEGER c{};
-        ::QueryPerformanceCounter(&c);
+        const BOOL result = ::QueryPerformanceCounter(&c);
+        if (!result)
+        {
+            throw MAKE_GENERAL_ERROR("Failed to ::QueryPerformanceFrequency");
+        }
         return c.QuadPart;
     }();
     // TimeSpan に変換

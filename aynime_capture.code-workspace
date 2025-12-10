@@ -32,7 +32,10 @@
 		"python.terminal.activateEnvironment": true,
 		"python.analysis.extraPaths": [
 			"src"
-		]
+		],
+		"[json]": {
+			"editor.defaultFormatter": "vscode.json-language-features"
+		}
 	},
 	"extensions": {
 		"recommendations": [

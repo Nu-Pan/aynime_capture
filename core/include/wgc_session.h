@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "frame_buffer.h"
+#include "utils.h"
 
 namespace ayc
 {
@@ -56,6 +57,10 @@ namespace ayc
 		// Frame Buffers
 		double				m_holdInSec;
 		FrameBuffer			m_frameBuffer;
+
+		// OnFrameArrived
+		mutable std::mutex					m_frameHandlerGuard;
+		std::optional<ayc::GeneralError>	m_frameHandlerException;
 	};
 }
 

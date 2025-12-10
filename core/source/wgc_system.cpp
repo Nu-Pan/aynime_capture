@@ -34,26 +34,19 @@ void ayc::Initialize()
     {
         return;
     }
-
     // WinRT 初期化
-    {
-        try
-        {
-            winrt::init_apartment(winrt::apartment_type::single_threaded);
-        }
-        catch (const winrt::hresult_error& e)
-        {
-            throw MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION("Failed to init_apartment (COM apartment confliction ?)", e);
-        }
-    }
-
+    TRY_WINRT(
+        [&]() { winrt::init_apartment(winrt::apartment_type::single_threaded); }
+    );
     // 必要機能が未サポートならエラー
-    if (!GraphicsCaptureSession::IsSupported())
+    const bool isGcsSupported = TRY_WINRT_RET(
+        [&]() { return GraphicsCaptureSession::IsSupported(); }
+    );
+    if (!isGcsSupported)
     {
         Finalize();
         throw MAKE_GENERAL_ERROR("GraphicsCaptureSession is not Supported.");
     }
-
     // D3D11 デバイス生成
     {
         // フラグ
@@ -64,7 +57,6 @@ void ayc::Initialize()
             D3D_FEATURE_LEVEL_11_1,
             D3D_FEATURE_LEVEL_11_0,
         };
-
         // 初期化
         D3D_FEATURE_LEVEL chosen{};
         const HRESULT result = D3D11CreateDevice(
@@ -87,7 +79,9 @@ void ayc::Initialize()
     }
     // WinRT デバイス生成
     {
-        auto dxgiDevice = s_d3dDevice.as<IDXGIDevice>();
+        const auto dxgiDevice = TRY_WINRT_RET(
+            [&]() { return s_d3dDevice.as<IDXGIDevice>(); }
+        );
         const HRESULT result = CreateDirect3D11DeviceFromDXGIDevice(
             dxgiDevice.get(),
             reinterpret_cast<::IInspectable**>(winrt::put_abi(s_wrtDevice))

@@ -289,4 +289,61 @@ namespace ayc
         std::stacktrace::current()\
     )
 
+// WinRT 呼び出し用ユーティリティ
+// @note: winrtLambda 無いで発生した WinRT 例外が GeneralError に変換される
+#define TRY_WINRT(winrtLambda) \
+    { \
+        try \
+        { \
+            winrtLambda(); \
+        } \
+        catch(const winrt::hresult_error& e) \
+        { \
+            throw MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION(#winrtLambda, e); \
+        } \
+    }
 
+// WinRT 呼び出し用ユーティリティ
+// @note: winrtLambda 無いで発生した WinRT 例外が GeneralError に変換される
+#define TRY_WINRT_RET(winrtLambda) \
+    [&]() \
+    { \
+        try \
+        { \
+            return winrtLambda(); \
+        } \
+        catch(const winrt::hresult_error& e) \
+        { \
+            throw MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION(#winrtLambda, e); \
+        } \
+    }();
+
+//-------------------------------------------------------------------------
+// Try WinRT API
+//-------------------------------------------------------------------------
+
+
+namespace ayc
+{
+    inline auto TryWinRT(
+        const char* pApiName,
+        const char* pFile,
+        int line,
+        auto callback
+    )
+    {
+        try
+        {
+            return callback();
+        }
+        catch(const winrt::hresult_error& e)
+        {
+            ayc::MakeGeneralErrorFromWinRTException(
+                std::format("Failed to {}", pApiName).c_str(),
+                pFile,
+                line,
+                std::stacktrace::current()
+            );
+        }
+    }
+}
