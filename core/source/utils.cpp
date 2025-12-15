@@ -132,13 +132,37 @@ std::string ayc::ComApartmenTypeDiagnosticInfo(const char* const pLabel)
     APTTYPEQUALIFIER aq;
     const HRESULT hr= ::CoGetApartmentType(&at, &aq);
     return std::format(
-        "[ayc] {} tid={}, hr={}, at={}, aq={}\n",
+        "[ayc] {} tid={}, hr={}, at={}, aq={}",
         pLabel,
         tid,
         hr,
         static_cast<int>(at),
         static_cast<int>(aq)
     );
+}
+
+//-------------------------------------------------------------------------
+// Python
+//-------------------------------------------------------------------------
+
+//-------------------------------------------------------------------------
+void ayc::PrintPython(const char* const pMessage)
+{
+    // 空文字列ならスキップ
+    if (!pMessage || !*pMessage)
+    {
+        return;
+    }
+    // python み初期化なら何もしない
+    if (!Py_IsInitialized())
+    {
+        return;
+    }
+    // GIL 取って print
+    {
+        py::gil_scoped_acquire gil;
+        py::print(pMessage);
+    }
 }
 
 //-----------------------------------------------------------------------------

@@ -286,7 +286,7 @@ void ayc::WGCSession::OnFrameArrived(
             static bool s_hasShown = false;
             if (!s_hasShown)
             {
-                printf(
+                ayc::PrintPython(
                     ComApartmenTypeDiagnosticInfo("ayc::WGCSession::OnFrameArrived").c_str()
                 );
                 s_hasShown = true;

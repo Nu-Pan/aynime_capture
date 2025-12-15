@@ -40,7 +40,7 @@ void ayc::Initialize()
     );
     // アパートメントタイプをデバッグ用にダンプ
     {
-        printf(
+        ayc::PrintPython(
             ComApartmenTypeDiagnosticInfo("ayc::Initialize").c_str()
         );
     }
