@@ -50,13 +50,13 @@ namespace ayc
 		ayc::SizeInt32	m_latestContentSize;
 
 		// WinRT Objects
-		Direct3D11CaptureFramePool	m_framePool;
-		FrameArrived_revoker		m_revoker;
-		GraphicsCaptureSession		m_captureSession;
+		ayc::agile_ref<Direct3D11CaptureFramePool>	m_framePool;
+		FrameArrived_revoker						m_revoker;
+		ayc::agile_ref<GraphicsCaptureSession>		m_captureSession;
 
 		// Frame Buffers
-		double				m_holdInSec;
-		FrameBuffer			m_frameBuffer;
+		double		m_holdInSec;
+		FrameBuffer	m_frameBuffer;
 
 		// OnFrameArrived
 		mutable std::mutex					m_frameHandlerGuard;

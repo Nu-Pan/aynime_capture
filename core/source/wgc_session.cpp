@@ -93,9 +93,9 @@ ayc::WGCSession::WGCSession(
 , m_maxHeight(maxHeight)
 , m_isRunning(false)
 , m_latestContentSize()
-, m_framePool(nullptr)
+, m_framePool()
 , m_revoker()
-, m_captureSession(nullptr)
+, m_captureSession()
 , m_holdInSec()
 , m_frameBuffer(holdInSec)
 , m_frameHandlerGuard()
@@ -141,10 +141,11 @@ ayc::WGCSession::WGCSession(
         }
     );
     // ハンドラ登録
+    auto framePool = m_framePool.get();
     m_revoker = TRY_WINRT_RET(
         [&]()
         {
-            return m_framePool.FrameArrived(
+            return framePool.FrameArrived(
                 winrt::auto_revoke,
                 { this, &WGCSession::OnFrameArrived }
             );
@@ -154,18 +155,19 @@ ayc::WGCSession::WGCSession(
     m_captureSession = TRY_WINRT_RET(
         [&]()
         {
-            return m_framePool.CreateCaptureSession(captureItem);
+            return framePool.CreateCaptureSession(captureItem);
         }
     );
     // セッションの設定を変更
+    auto captureSession = m_captureSession.get();
     {
-        CALL_GCS_MEMBER(m_captureSession, IsCursorCaptureEnabled, false);
-        CALL_GCS_MEMBER(m_captureSession, IsBorderRequired, false);
-        CALL_GCS_MEMBER(m_captureSession, IncludeSecondaryWindows, false);
+        CALL_GCS_MEMBER(captureSession, IsCursorCaptureEnabled, false);
+        CALL_GCS_MEMBER(captureSession, IsBorderRequired, false);
+        CALL_GCS_MEMBER(captureSession, IncludeSecondaryWindows, false);
     }
     // セッション開始
     TRY_WINRT(
-        [&]() { m_captureSession.StartCapture(); }
+        [&]() { captureSession.StartCapture(); }
     )
     // ステート切り替え
     {
@@ -190,7 +192,11 @@ void ayc::WGCSession::Close()
     if (m_captureSession)
     {
         TRY_WINRT(
-            [&]() { m_captureSession.Close(); }
+            [&]()
+            {
+                m_captureSession.get().Close();
+                m_captureSession = {};
+            }
         )
     }
     // イベント登録解除
@@ -201,7 +207,11 @@ void ayc::WGCSession::Close()
     if (m_framePool)
     {
         TRY_WINRT(
-            [&]() { m_framePool.Close(); }
+            [&]()
+            {
+                m_framePool.get().Close();
+                m_framePool = {};
+            }
         )
     }
     // フレームバッファクリア
@@ -262,6 +272,26 @@ void ayc::WGCSession::OnFrameArrived(
     // ハンドラ内での例外は飲み込んで m_frameHandlerException 経由で親スレッドに伝達
     try
     {
+        /* @note:
+            sender はこの OnFrameArrived 内で正常に呼び出せるようになってるので、
+            意味もなく m_framePool の方を触ってはいけない。
+            やらかすと、
+
+            > アプリケーションは、別のスレッドにマーシャリングされたインターフェイスを呼び出しました。, アプリケーションは、別のスレッドにマーシャリングされたインターフェイスを呼び出しました。(0x8001010E)
+
+            が出たりする。
+        */
+        // アパートメントタイプをデバッグ用にダンプ
+        {
+            static bool s_hasShown = false;
+            if (!s_hasShown)
+            {
+                printf(
+                    ComApartmenTypeDiagnosticInfo("ayc::WGCSession::OnFrameArrived").c_str()
+                );
+                s_hasShown = true;
+            }
+        }
         // 「現在」を確定させる
         const TimeSpan nowInTS = []() {
             return NowFromQPC();
@@ -310,7 +340,7 @@ void ayc::WGCSession::OnFrameArrived(
             TRY_WINRT(
                 [&]()
                 {
-                    m_framePool.Recreate(
+                    sender.Recreate(
                         WRTDevice(),
                         DirectXPixelFormat::B8G8R8A8UIntNormalized,
                         WGC_FRAME_POOL_NUM_BUFFERS,

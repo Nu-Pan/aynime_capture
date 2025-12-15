@@ -72,7 +72,7 @@ ayc::TimeSpan ayc::NowFromQPC()
 // GeneralError
 //-----------------------------------------------------------------------------
 
-std::string ayc::hresult_to_string(HRESULT hresultValue)
+std::string ayc::HresultToString(HRESULT hresultValue)
 {
     // 説明文字列を問い合わせる
     wchar_t* pWideMessageBuffer = nullptr;
@@ -121,6 +121,23 @@ std::string ayc::hresult_to_string(HRESULT hresultValue)
         "{}(0x{:08X})",
         hresultMessage,
         static_cast<uint32_t>(hresultValue)
+    );
+}
+
+// COM のアパアート面と種別診断情報を文字列で取得
+std::string ayc::ComApartmenTypeDiagnosticInfo(const char* const pLabel)
+{
+    const DWORD tid = ::GetCurrentThreadId();
+    APTTYPE at;
+    APTTYPEQUALIFIER aq;
+    const HRESULT hr= ::CoGetApartmentType(&at, &aq);
+    return std::format(
+        "[ayc] {} tid={}, hr={}, at={}, aq={}\n",
+        pLabel,
+        tid,
+        hr,
+        static_cast<int>(at),
+        static_cast<int>(aq)
     );
 }
 

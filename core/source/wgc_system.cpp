@@ -18,7 +18,7 @@ namespace
 {
 	ayc::com_ptr<ID3D11Device> s_d3dDevice;
     ayc::com_ptr<ID3D11DeviceContext> s_d3dContext;
-    ayc::IDirect3DDevice s_wrtDevice{ nullptr };
+    ayc::agile_ref<ayc::IDirect3DDevice> s_wrtDevice;
 }
 
 //-----------------------------------------------------------------------------
@@ -38,6 +38,12 @@ void ayc::Initialize()
     TRY_WINRT(
         [&]() { winrt::init_apartment(winrt::apartment_type::single_threaded); }
     );
+    // アパートメントタイプをデバッグ用にダンプ
+    {
+        printf(
+            ComApartmenTypeDiagnosticInfo("ayc::Initialize").c_str()
+        );
+    }
     // 必要機能が未サポートならエラー
     const bool isGcsSupported = TRY_WINRT_RET(
         [&]() { return GraphicsCaptureSession::IsSupported(); }
@@ -82,15 +88,17 @@ void ayc::Initialize()
         const auto dxgiDevice = TRY_WINRT_RET(
             [&]() { return s_d3dDevice.as<IDXGIDevice>(); }
         );
+        ayc::IDirect3DDevice wrtDevice{ nullptr };
         const HRESULT result = CreateDirect3D11DeviceFromDXGIDevice(
             dxgiDevice.get(),
-            reinterpret_cast<::IInspectable**>(winrt::put_abi(s_wrtDevice))
+            reinterpret_cast<::IInspectable**>(winrt::put_abi(wrtDevice))
         );
         if (result != S_OK)
         {
             Finalize();
             throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateDirect3D11DeviceFromDXGIDevice.", result);
         }
+        s_wrtDevice = wrtDevice;
     }
 }
 
@@ -99,7 +107,7 @@ void ayc::Initialize()
 void ayc::Finalize()
 {
     // 各インスタンスを解放
-    s_wrtDevice = nullptr;
+    s_wrtDevice = {};
     s_d3dContext = nullptr;
     s_d3dDevice = nullptr;
 
@@ -124,7 +132,7 @@ const ayc::com_ptr<ID3D11DeviceContext>& ayc::D3DContext()
 
 //-----------------------------------------------------------------------------
 // WinRT D3D Device
-const ayc::IDirect3DDevice& ayc::WRTDevice()
+ayc::IDirect3DDevice ayc::WRTDevice()
 {
-    return s_wrtDevice;
+    return s_wrtDevice.get();
 }

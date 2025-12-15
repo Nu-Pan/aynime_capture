@@ -20,7 +20,10 @@ namespace ayc
     //-------------------------------------------------------------------------
 
     // HRESULT --> 人間が読める説明文字列
-    std::string hresult_to_string(HRESULT hresultValue);
+    std::string HresultToString(HRESULT hresultValue);
+
+    // COM のアパアート面と種別診断情報を文字列で取得
+    std::string ComApartmenTypeDiagnosticInfo(const char* const pLabel);
 
     //-------------------------------------------------------------------------
     // GeneralError
@@ -161,7 +164,7 @@ namespace ayc
             pFile,
             line,
             "HRESULT",
-            ayc::hresult_to_string(hresultValue).c_str(),
+            ayc::HresultToString(hresultValue).c_str(),
             stackTrace
         );
     }
@@ -224,7 +227,7 @@ namespace ayc
                 "{}, {}, {}",
                 raisedExceptionTypeName,
                 raisedExceptionMessage,
-                ayc::hresult_to_string(hresultValue)
+                ayc::HresultToString(hresultValue)
             ).c_str(),
             stackTrace
         );

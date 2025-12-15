@@ -16,6 +16,6 @@ namespace ayc
 	const com_ptr<ID3D11DeviceContext>& D3DContext();
 
 	// WinRT D3D Device
-	const IDirect3DDevice& WRTDevice();
+	IDirect3DDevice WRTDevice();
 }
 
