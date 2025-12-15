@@ -107,7 +107,11 @@ void ayc::Initialize()
 void ayc::Finalize()
 {
     // 各インスタンスを解放
-    s_wrtDevice = {};
+    if (s_wrtDevice)
+    {
+        s_wrtDevice.get().Close();
+        s_wrtDevice = {};
+    }
     s_d3dContext = nullptr;
     s_d3dDevice = nullptr;
 
