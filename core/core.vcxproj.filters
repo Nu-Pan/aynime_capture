@@ -23,7 +23,7 @@
     <ClCompile Include="source\wgc_session.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="source\wgc_system.cpp">
+    <ClCompile Include="source\d3d11_system.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="source\frame_buffer.cpp">
@@ -46,7 +46,7 @@
     <ClInclude Include="include\wgc_session.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\wgc_system.h">
+    <ClInclude Include="include\d3d11_system.h">
       <Filter>include</Filter>
     </ClInclude>
     <ClInclude Include="include\frame_buffer.h">

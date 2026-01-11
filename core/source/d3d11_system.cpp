@@ -6,7 +6,7 @@
 #include "stdafx.h"
 
 // self
-#include "wgc_system.h"
+#include "d3d11_system.h"
 
 // other
 #include "utils.h"
@@ -26,31 +26,12 @@ namespace
 
 //-----------------------------------------------------------------------------
 // 初期化
-void ayc::Initialize()
+void ayc::d3d11::Initialize()
 {
     // 初期化済みならスキップ
     if (s_d3dDevice)
     {
         return;
-    }
-    // WinRT 初期化
-    TRY_WINRT((
-        [&]() { winrt::init_apartment(winrt::apartment_type::single_threaded); }
-    ));
-    // アパートメントタイプをデバッグ用にダンプ
-    {
-        ayc::PrintPython(
-            ComApartmenTypeDiagnosticInfo("ayc::Initialize").c_str()
-        );
-    }
-    // 必要機能が未サポートならエラー
-    const bool isGcsSupported = TRY_WINRT_RET((
-        [&]() { return GraphicsCaptureSession::IsSupported(); }
-    ));
-    if (!isGcsSupported)
-    {
-        Finalize();
-        throw MAKE_GENERAL_ERROR("GraphicsCaptureSession is not Supported.");
     }
     // D3D11 デバイス生成
     {
@@ -82,11 +63,25 @@ void ayc::Initialize()
             throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to D3D11CreateDevice.", result);
         }
     }
+    // マルチスレッド保護を明示的に有効化
+    {
+        ayc::com_ptr<ID3D11Multithread> mt;
+        const HRESULT hr = s_d3dContext->QueryInterface(
+            __uuidof(ID3D11Multithread),
+            mt.put_void()
+        );
+        if (hr != S_OK || !mt)
+        {
+            Finalize();
+            throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to get ID3D11Multithread", hr);
+        }
+        mt->SetMultithreadProtected(TRUE);
+    }
 }
 
 //-----------------------------------------------------------------------------
 // 後始末
-void ayc::Finalize()
+void ayc::d3d11::Finalize()
 {
     // 各インスタンスを解放
     s_d3dContext = nullptr;
@@ -95,14 +90,14 @@ void ayc::Finalize()
 
 //-----------------------------------------------------------------------------
 // D3D11 Device
-const ayc::com_ptr<ID3D11Device>& ayc::D3DDevice()
+const ayc::com_ptr<ID3D11Device>& ayc::d3d11::Device()
 {
     return s_d3dDevice;
 }
 
 //-----------------------------------------------------------------------------
 // D3D11 Device Context
-const ayc::com_ptr<ID3D11DeviceContext>& ayc::D3DContext()
+const ayc::com_ptr<ID3D11DeviceContext>& ayc::d3d11::Context()
 {
     return s_d3dContext;
 }

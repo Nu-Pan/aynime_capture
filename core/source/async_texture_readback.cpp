@@ -10,7 +10,7 @@
 
 // other
 #include "utils.h"
-#include "wgc_system.h"
+#include "d3d11_system.h"
 
 //-----------------------------------------------------------------------------
 // Functions
@@ -46,7 +46,7 @@ void ayc::ReadbackTexture(
             stagingDesc.MiscFlags = 0;
         }
         // 生成
-        const HRESULT result = D3DDevice()->CreateTexture2D(
+        const HRESULT result = ayc::d3d11::Device()->CreateTexture2D(
             &stagingDesc,
             nullptr,
             stgTex.put()
@@ -58,7 +58,7 @@ void ayc::ReadbackTexture(
     }
     // DEFAULT --> STATING
     {
-        D3DContext()->CopyResource(stgTex.get(), pSourceTexture.get());
+        ayc::d3d11::Context()->CopyResource(stgTex.get(), pSourceTexture.get());
     }
     // STAGING --> システムメモリ
     {
@@ -73,7 +73,7 @@ void ayc::ReadbackTexture(
         // マップ
         D3D11_MAPPED_SUBRESOURCE mapped{};
         {
-            const HRESULT result = D3DContext()->Map(stgTex.get(), 0, D3D11_MAP_READ, 0, &mapped);
+            const HRESULT result = ayc::d3d11::Context()->Map(stgTex.get(), 0, D3D11_MAP_READ, 0, &mapped);
             if (result != S_OK)
             {
                 throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to ID3D11DeviceContext::Map", result);
@@ -101,7 +101,7 @@ void ayc::ReadbackTexture(
         }
         // アンマップ
         {
-            D3DContext()->Unmap(stgTex.get(), 0);
+            ayc::d3d11::Context()->Unmap(stgTex.get(), 0);
         }
     }
     // サイズを書き戻す

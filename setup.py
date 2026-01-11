@@ -12,7 +12,7 @@ ext_modules = [
             "core/source/stdafx.cpp",
             "core/source/utils.cpp",
             "core/source/wgc_session.cpp",
-            "core/source/wgc_system.cpp",
+            "core/source/d3d11_system.cpp",
         ],
         include_dirs=["core/include"],
         libraries=[

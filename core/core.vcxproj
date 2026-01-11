@@ -21,7 +21,7 @@
     </ClCompile>
     <ClCompile Include="source\utils.cpp" />
     <ClCompile Include="source\wgc_session.cpp" />
-    <ClCompile Include="source\wgc_system.cpp" />
+    <ClCompile Include="source\d3d11_system.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\async_texture_readback.h" />
@@ -30,7 +30,7 @@
     <ClInclude Include="include\stdafx.h" />
     <ClInclude Include="include\utils.h" />
     <ClInclude Include="include\wgc_session.h" />
-    <ClInclude Include="include\wgc_system.h" />
+    <ClInclude Include="include\d3d11_system.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5D8F91DB-5226-5B60-8B60-2285B6D8E223}</ProjectGuid>

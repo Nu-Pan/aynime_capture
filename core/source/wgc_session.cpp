@@ -9,7 +9,7 @@
 #include "wgc_session.h"
 
 // other
-#include "wgc_system.h"
+#include "d3d11_system.h"
 #include "utils.h"
 #include "resize_texture.h"
 
@@ -241,7 +241,7 @@ namespace
                 {
                     // コピー先を生成
                     {
-                        const HRESULT result = ayc::D3DDevice()->CreateTexture2D(
+                        const HRESULT result = ayc::d3d11::Device()->CreateTexture2D(
                             &cfpDesc,
                             /*pInitialData=*/nullptr,
                             pFBTex.put()
@@ -253,7 +253,7 @@ namespace
                     }
                     // コピー
                     {
-                        ayc::D3DContext()->CopyResource(pFBTex.get(), pCFPTex.get());
+                        ayc::d3d11::Context()->CopyResource(pFBTex.get(), pCFPTex.get());
                     }
                 }
                 else
@@ -338,6 +338,22 @@ namespace
                     [&]() { winrt::init_apartment(winrt::apartment_type::single_threaded); }
                 ));
             }
+            // アパートメントタイプをデバッグ用にダンプ
+            {
+                ayc::PrintPython(
+                    ayc::ComApartmenTypeDiagnosticInfo("ayc::Initialize").c_str()
+                );
+            }
+            // 必要機能が未サポートならエラー
+            {
+                const bool isGcsSupported = TRY_WINRT_RET((
+                    [&]() { return ayc::GraphicsCaptureSession::IsSupported(); }
+                ));
+                if (!isGcsSupported)
+                {
+                    throw MAKE_GENERAL_ERROR("GraphicsCaptureSession is not Supported.");
+                }
+            }
             // DispatcherQueueController 生成
             {
                 const DispatcherQueueOptions dqo{
@@ -362,7 +378,7 @@ namespace
             // WinRT D3D11 Device
             {
                 const auto dxgiDevice = TRY_WINRT_RET((
-                    [&]() { return ayc::D3DDevice().as<IDXGIDevice>(); }
+                    [&]() { return ayc::d3d11::Device().as<IDXGIDevice>(); }
                 ));
                 const HRESULT result = TRY_WINRT_RET((
                     [&]()

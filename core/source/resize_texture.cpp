@@ -9,7 +9,7 @@
 #include "resize_texture.h"
 
 // other
-#include "wgc_system.h"
+#include "d3d11_system.h"
 #include "utils.h"
 
 //-----------------------------------------------------------------------------
@@ -82,7 +82,7 @@ namespace
         // シェーダーオブジェクトを生成
         ayc::com_ptr<ID3D11VertexShader> pVertexShader;
         {
-            const auto result = ayc::D3DDevice()->CreateVertexShader(
+            const auto result = ayc::d3d11::Device()->CreateVertexShader(
                 pBlob->GetBufferPointer(),
                 pBlob->GetBufferSize(),
                 /*pClassLinkage=*/nullptr,
@@ -147,7 +147,7 @@ namespace
         // シェーダーオブジェクトを生成
         ayc::com_ptr<ID3D11PixelShader> pPixelShader;
         {
-            const auto result = ayc::D3DDevice()->CreatePixelShader(
+            const auto result = ayc::d3d11::Device()->CreatePixelShader(
                 pBlob->GetBufferPointer(),
                 pBlob->GetBufferSize(),
                 /*pClassLinkage=*/nullptr,
@@ -181,8 +181,8 @@ ayc::com_ptr<ID3D11Texture2D> ayc::ResizeTexture(
 )
 {
     // エイリアス
-    auto pDevice = ayc::D3DDevice().get();
-    auto pContext = ayc::D3DContext().get();
+    auto pDevice = ayc::d3d11::Device().get();
+    auto pContext = ayc::d3d11::Context().get();
 
     // コピー元 desc
     D3D11_TEXTURE2D_DESC srcDesc{};

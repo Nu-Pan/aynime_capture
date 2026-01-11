@@ -7,7 +7,7 @@
 
 // other
 #include "utils.h"
-#include "wgc_system.h"
+#include "d3d11_system.h"
 #include "wgc_session.h"
 #include "async_texture_readback.h"
 
@@ -41,9 +41,9 @@ namespace ayc
         )
         : m_pWGCSession()
         {
-            // システム初期化
+            // D3D11 初期化
             {
-                ayc::Initialize();
+                ayc::d3d11::Initialize();
             }
             // セッション開始
             {

@@ -27,7 +27,7 @@
     <ClCompile Include="utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="wgc_system.cpp">
+    <ClCompile Include="d3d11_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -41,7 +41,7 @@
     <ClInclude Include="utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="wgc_system.h">
+    <ClInclude Include="d3d11_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
