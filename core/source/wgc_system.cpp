@@ -34,9 +34,9 @@ void ayc::Initialize()
         return;
     }
     // WinRT 初期化
-    TRY_WINRT(
+    TRY_WINRT((
         [&]() { winrt::init_apartment(winrt::apartment_type::single_threaded); }
-    );
+    ));
     // アパートメントタイプをデバッグ用にダンプ
     {
         ayc::PrintPython(
@@ -44,9 +44,9 @@ void ayc::Initialize()
         );
     }
     // 必要機能が未サポートならエラー
-    const bool isGcsSupported = TRY_WINRT_RET(
+    const bool isGcsSupported = TRY_WINRT_RET((
         [&]() { return GraphicsCaptureSession::IsSupported(); }
-    );
+    ));
     if (!isGcsSupported)
     {
         Finalize();

@@ -33,15 +33,9 @@ namespace ayc
 			// 終了通知イベント
 			const HANDLE& GetStopEvent() const;
 
-			// スレッド間例外通知
-			void SetException(const ayc::GeneralError& e);
-			std::optional<ayc::GeneralError> PopException() const;
-
 		private:
-			FrameBuffer m_frameBuffer;
-			HANDLE m_stopEvent;
-			mutable std::mutex m_wrtClosureGuard;
-			std::optional<ayc::GeneralError> m_wrtClosureException;
+			FrameBuffer	m_frameBuffer;
+			HANDLE		m_stopEvent;
 		};
 	}
 
@@ -64,14 +58,18 @@ namespace ayc
 		void Close();
 
 		// 単一フレームのコピーを得る
-		com_ptr<ID3D11Texture2D> CopyFrame(double relativeInSec) const;
+		com_ptr<ID3D11Texture2D> CopyFrame(double relativeInSec);
 
 		// バックバッファのコピー（スナップショット）を得る
 		FreezedFrameBuffer CopyFrameBuffer(double durationInSec);
 
 	private:
+		// 事前条件チェック
+		void _PreCondition();
+
 		bool m_isClosed;
 		details::WGCSessionState m_state;
+		ExceptionTunnel m_exceptionTunnel;
 		std::thread m_wrtClosureThread;
 	};
 }

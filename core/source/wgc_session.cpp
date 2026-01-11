@@ -98,28 +98,19 @@ namespace
     class _OnFrameArrived
     {
     public:
-        // デフォルトコンストラクタ
-        _OnFrameArrived()
-            : m_wrtDevice(nullptr)
-            , m_pFrameBuffer(nullptr)
-            , m_latestContentSize()
-            , m_maxWidth()
-            , m_maxHeight()
-        {
-            // nop
-        }
-
         // コンストラクタ
         _OnFrameArrived
         (
-            const ayc::IDirect3DDevice wrtDevice,
-            ayc::FrameBuffer* pFrameBuffer,
+            const ayc::IDirect3DDevice& wrtDevice,
+            ayc::details::WGCSessionState& state,
+            ayc::ExceptionTunnel& exceptionTunnel,
             const ayc::SizeInt32& initialContentSize,
             std::optional<std::size_t> maxWidth,
             std::optional<std::size_t> maxHeight
         )
         : m_wrtDevice(wrtDevice)
-        , m_pFrameBuffer(pFrameBuffer)
+        , m_state(state)
+        , m_exceptionTunnel(exceptionTunnel)
         , m_latestContentSize(initialContentSize)
         , m_maxWidth(maxWidth)
         , m_maxHeight(maxHeight)
@@ -139,147 +130,171 @@ namespace
             const ayc::WinRTIInspectable& args
         )
         {
-            // 必要な状態が揃ってなければ何もしない
-            if (!m_wrtDevice || !m_pFrameBuffer)
+            try
             {
-                return;
-            }
-            // @todo _WinRTClosureThreadHandler 側でまとめてハンドルできるつもりだけど本当？
-            // アパートメントタイプをデバッグ用にダンプ
-            {
-                static bool s_hasShown = false;
-                if (!s_hasShown)
+                // @note: デバッグ用、後で消す
+                throw MAKE_GENERAL_ERROR("TEST FOR DEBUG");
+
+                // @todo _WinRTClosureThreadHandler 側でまとめてハンドルできるつもりだけど本当？
+                // アパートメントタイプをデバッグ用にダンプ
                 {
-                    ayc::PrintPython(
-                        ayc::ComApartmenTypeDiagnosticInfo("_OnFrameArrived::Handler").c_str()
-                    );
-                    s_hasShown = true;
-                }
-            }
-            // フレームを取得
-            /* @note:
-                現在到着している中で最新の１フレームだけを使い、それ以外は読み捨てる。
-                フレームバッファをマメにクリーンナップしたいので、フレームが無い場合も処理継続。
-            */
-            const ayc::Direct3D11CaptureFrame frame = [&]()
-            {
-                auto f_ret = TRY_WINRT_RET((
-                    [&]() { return sender.TryGetNextFrame(); }
-                ));
-                for (;;)
-                {
-                    const auto f_peek = TRY_WINRT_RET((
-                        [&]() { return sender.TryGetNextFrame(); }
-                    ));
-                    if (!f_peek)
+                    static bool s_hasShown = false;
+                    if (!s_hasShown)
                     {
-                        return f_ret;
-                    }
-                    f_ret = f_peek;
-                }
-            }();
-            if (!frame)
-            {
-                return;
-            }
-            // ウィンドウのサイズ変更をハンドル
-            /*
-            @note:
-                ContentSize はフレームプールによるスケールがかかる前のサイズなので注意。
-                オリジナルのウィンドウサイズということ。
-            */
-            const auto contentSize = TRY_WINRT_RET((
-                [&]() { return frame.ContentSize(); }
-            ));
-            if ( contentSize != m_latestContentSize )
-            {
-                // フレームプールを再生成
-                TRY_WINRT((
-                    [&]()
-                    {
-                        sender.Recreate(
-                            m_wrtDevice,
-                            ayc::DirectXPixelFormat::B8G8R8A8UIntNormalized,
-                            WGC_FRAME_POOL_NUM_BUFFERS,
-                            contentSize
+                        ayc::PrintPython(
+                            ayc::ComApartmenTypeDiagnosticInfo("_OnFrameArrived::Handler").c_str()
                         );
+                        s_hasShown = true;
                     }
-                ));
-                // サイズ情報を更新
-                {
-                    m_latestContentSize = contentSize;
                 }
-            }
-            // CaptureFramePool バックバッファの D3D11 テクスチャを取得
-            ayc::com_ptr<ID3D11Texture2D> pCFPTex;
-            {
-                const auto surface = TRY_WINRT_RET((
-                    [&]() { return frame.Surface(); }
-                ));
-                const auto access = TRY_WINRT_RET((
-                    [&]() { return surface.as<ayc::IDirect3DDxgiInterfaceAccess>(); }
-                ));
-                const HRESULT result = access->GetInterface(
-                    __uuidof(ID3D11Texture2D),
-                    pCFPTex.put_void()
-                );
-                if (result != S_OK)
+                // フレームを取得
+                /* @note:
+                    現在到着している中で最新の１フレームだけを使い、それ以外は読み捨てる。
+                    フレームバッファをマメにクリーンナップしたいので、フレームが無い場合も処理継続。
+                */
+                const ayc::Direct3D11CaptureFrame frame = [&]()
+                    {
+                        auto f_ret = TRY_WINRT_RET((
+                            [&]() { return sender.TryGetNextFrame(); }
+                            ));
+                        for (;;)
+                        {
+                            const auto f_peek = TRY_WINRT_RET((
+                                [&]() { return sender.TryGetNextFrame(); }
+                                ));
+                            if (!f_peek)
+                            {
+                                return f_ret;
+                            }
+                            f_ret = f_peek;
+                        }
+                    }();
+                if (!frame)
                 {
-                    throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to GetInterface", result);
+                    return;
                 }
-            }
-            // フレームプール desc
-            D3D11_TEXTURE2D_DESC cfpDesc{};
-            {
-                pCFPTex->GetDesc(&cfpDesc);
-            }
-            // コピー後サイズを解決
-            const auto [optimalWidth, optimalHeight] = _ResolveOptimalFrameSize(
-                cfpDesc.Width,
-                cfpDesc.Height,
-                m_maxWidth,
-                m_maxHeight
-            );
-            // フレームバッファ用にテクスチャのコピーを取る
-            /* @note:
-                スケーリング不要ならシンプルにコピー。
-                スケーリングが必要ならシェーダー起動。
-            */
-            ayc::com_ptr<ID3D11Texture2D> pFBTex;
-            if (cfpDesc.Width == optimalWidth && cfpDesc.Height == optimalHeight)
-            {
-                // コピー先を生成
+                // ウィンドウのサイズ変更をハンドル
+                /*
+                @note:
+                    ContentSize はフレームプールによるスケールがかかる前のサイズなので注意。
+                    オリジナルのウィンドウサイズということ。
+                */
+                const auto contentSize = TRY_WINRT_RET((
+                    [&]() { return frame.ContentSize(); }
+                    ));
+                if (contentSize != m_latestContentSize)
                 {
-                    const HRESULT result = ayc::D3DDevice()->CreateTexture2D(
-                        &cfpDesc,
-                        /*pInitialData=*/nullptr,
-                        pFBTex.put()
+                    // フレームプールを再生成
+                    TRY_WINRT((
+                        [&]()
+                        {
+                            sender.Recreate(
+                                m_wrtDevice,
+                                ayc::DirectXPixelFormat::B8G8R8A8UIntNormalized,
+                                WGC_FRAME_POOL_NUM_BUFFERS,
+                                contentSize
+                            );
+                        }
+                        ));
+                    // サイズ情報を更新
+                    {
+                        m_latestContentSize = contentSize;
+                    }
+                }
+                // CaptureFramePool バックバッファの D3D11 テクスチャを取得
+                ayc::com_ptr<ID3D11Texture2D> pCFPTex;
+                {
+                    const auto surface = TRY_WINRT_RET((
+                        [&]() { return frame.Surface(); }
+                        ));
+                    const auto access = TRY_WINRT_RET((
+                        [&]() { return surface.as<ayc::IDirect3DDxgiInterfaceAccess>(); }
+                        ));
+                    const HRESULT result = access->GetInterface(
+                        __uuidof(ID3D11Texture2D),
+                        pCFPTex.put_void()
                     );
                     if (result != S_OK)
                     {
-                        throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateTexture2D", result);
+                        throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to GetInterface", result);
                     }
                 }
-                // コピー
+                // フレームプール desc
+                D3D11_TEXTURE2D_DESC cfpDesc{};
                 {
-                    ayc::D3DContext()->CopyResource(pFBTex.get(), pCFPTex.get());
+                    pCFPTex->GetDesc(&cfpDesc);
+                }
+                // コピー後サイズを解決
+                const auto [optimalWidth, optimalHeight] = _ResolveOptimalFrameSize(
+                    cfpDesc.Width,
+                    cfpDesc.Height,
+                    m_maxWidth,
+                    m_maxHeight
+                );
+                // フレームバッファ用にテクスチャのコピーを取る
+                /* @note:
+                    スケーリング不要ならシンプルにコピー。
+                    スケーリングが必要ならシェーダー起動。
+                */
+                ayc::com_ptr<ID3D11Texture2D> pFBTex;
+                if (cfpDesc.Width == optimalWidth && cfpDesc.Height == optimalHeight)
+                {
+                    // コピー先を生成
+                    {
+                        const HRESULT result = ayc::D3DDevice()->CreateTexture2D(
+                            &cfpDesc,
+                            /*pInitialData=*/nullptr,
+                            pFBTex.put()
+                        );
+                        if (result != S_OK)
+                        {
+                            throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateTexture2D", result);
+                        }
+                    }
+                    // コピー
+                    {
+                        ayc::D3DContext()->CopyResource(pFBTex.get(), pCFPTex.get());
+                    }
+                }
+                else
+                {
+                    // リサイズ兼コピー
+                    pFBTex = ayc::ResizeTexture(pCFPTex, optimalWidth, optimalHeight);
+                }
+                // フレームバッファに詰める
+                {
+                    m_state.GetFrameBuffer().PushFrame(pFBTex, frame.SystemRelativeTime());
                 }
             }
-            else
+            catch (const ayc::GeneralError& e)
             {
-                // リサイズ兼コピー
-                pFBTex = ayc::ResizeTexture(pCFPTex, optimalWidth, optimalHeight);
+                m_exceptionTunnel.ThrowIn(e);
             }
-            // フレームバッファに詰める
+            catch (const std::exception& e)
             {
-                m_pFrameBuffer->PushFrame(pFBTex, frame.SystemRelativeTime());
+                m_exceptionTunnel.ThrowIn(
+                    MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION("Unhandled C++ Exception", e)
+                );
+            }
+            catch (const winrt::hresult_error& e)
+            {
+                m_exceptionTunnel.ThrowIn(
+                    MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION("Unhandled WinRT Exception", e)
+                );
+            }
+            catch (...)
+            {
+                m_exceptionTunnel.ThrowIn(
+                    MAKE_GENERAL_ERROR("Unhandled Unknown Exception")
+                );
             }
         }
 
     private:
         // 親のメンバ変数への参照
-        ayc::IDirect3DDevice    m_wrtDevice;
-        ayc::FrameBuffer*       m_pFrameBuffer;
+        const ayc::IDirect3DDevice&     m_wrtDevice;
+        ayc::details::WGCSessionState&  m_state;
+        ayc::ExceptionTunnel&           m_exceptionTunnel;
 
         // サイズ関係
         ayc::SizeInt32	            m_latestContentSize;
@@ -309,10 +324,11 @@ namespace
         // コンストラクタ
         _WinRTClosureConcrete(const WINRT_CLOSURE_INIT_PARAM& param)
         : m_state(param.state)
+        , m_exceptionTunnel()
         , m_dqc(nullptr)
         , m_wrtDevice(nullptr)
         , m_framePool(nullptr)
-        , m_onFrameArrived()
+        , m_pOnFrameArrived(nullptr)
         , m_revoker()
         , m_captureSession(nullptr)
         {
@@ -390,6 +406,10 @@ namespace
                     throw MAKE_GENERAL_ERROR("captureItem is Invalid");
                 }
             }
+            // コンテンツサイズ取得
+            const auto captureItemSize = TRY_WINRT_RET((
+                [&]() { return captureItem.Size(); }
+            ));
             // フレームプール生成
             /* @note:
                 フレームプールのレベルではアルファチャンネルを切ることはできない
@@ -401,18 +421,21 @@ namespace
                         m_wrtDevice,
                         ayc::DirectXPixelFormat::B8G8R8A8UIntNormalized,
                         WGC_FRAME_POOL_NUM_BUFFERS,
-                        captureItem.Size()
+                        captureItemSize
                     );
                 }
             ));
             // ハンドラーインスタンス生成
             {
-                m_onFrameArrived = _OnFrameArrived(
-                    m_wrtDevice,
-                    &m_state.GetFrameBuffer(),
-                    captureItem.Size(),
-                    param.maxWidth,
-                    param.maxHeight
+                m_pOnFrameArrived.reset(
+                    new _OnFrameArrived(
+                        m_wrtDevice,
+                        m_state,
+                        m_exceptionTunnel,
+                        captureItemSize,
+                        param.maxWidth,
+                        param.maxHeight
+                    )
                 );
             }
             // フレーム到達ハンドラ登録
@@ -422,7 +445,7 @@ namespace
                     {
                         return m_framePool.FrameArrived(
                             winrt::auto_revoke,
-                            { &m_onFrameArrived, &_OnFrameArrived::Handler }
+                            { m_pOnFrameArrived.get(), &_OnFrameArrived::Handler}
                         );
                     }
                 ));
@@ -470,7 +493,7 @@ namespace
             }
             // ハンドラーインスタンス後始末
             {
-                m_onFrameArrived = _OnFrameArrived();
+                m_pOnFrameArrived.reset();
             }
             // フレームプール後始末
             if(m_framePool)
@@ -525,7 +548,9 @@ namespace
         void Run()
         {
             // メッセージループ
-            ayc::DispatcherQueue dq = m_dqc.DispatcherQueue();
+            const ayc::DispatcherQueue dq = TRY_WINRT_RET((
+                [&]() { return m_dqc.DispatcherQueue(); }
+            ));
             MSG msg{};
             for (;;)
             {
@@ -546,6 +571,7 @@ namespace
                 {
                     for(;;)
                     {
+                        // メッセージを１件取得
                         const bool peekResult = PeekMessage(
                             &msg,
                             /*hWnd=*/nullptr,
@@ -553,16 +579,25 @@ namespace
                             /*wMsgFilterMax=*/0,
                             /*wRemoveMsg=*/PM_REMOVE
                         );
+                        // _OnFrameArrived::Handler で発生した例外を再送
+                        {
+                            m_exceptionTunnel.ThrowOut();
+                        }
+                        // メッセージなしなら次の待機へ
                         if (!peekResult)
                         {
                             break;
                         }
+                        // 終了メッセージなら、メッセージループ終了
                         if (msg.message == WM_QUIT)
                         {
                             return;
                         }
-                        TranslateMessage(&msg);
-                        DispatchMessage(&msg);
+                        // メッセージを処理
+                        {
+                            TranslateMessage(&msg);
+                            DispatchMessage(&msg);
+                        }
                     }
                 }
                 else if (wait == WAIT_FAILED)
@@ -573,22 +608,24 @@ namespace
         }
 
     private:
-        // ステート
+        // WinRT じゃない
         ayc::details::WGCSessionState&  m_state;
+        ayc::ExceptionTunnel            m_exceptionTunnel;
 
         // WinRT オブジェクト
-        ayc::DispatcherQueueController  m_dqc;
-        ayc::IDirect3DDevice            m_wrtDevice;
-        ayc::Direct3D11CaptureFramePool m_framePool;
-        _OnFrameArrived                 m_onFrameArrived;
-        ayc::FrameArrived_revoker	    m_revoker;
-        ayc::GraphicsCaptureSession		m_captureSession;
+        ayc::DispatcherQueueController      m_dqc;
+        ayc::IDirect3DDevice                m_wrtDevice;
+        ayc::Direct3D11CaptureFramePool     m_framePool;
+        std::unique_ptr<_OnFrameArrived>    m_pOnFrameArrived;
+        ayc::FrameArrived_revoker	        m_revoker;
+        ayc::GraphicsCaptureSession		    m_captureSession;
     };
 
     //-----------------------------------------------------------------------------
     // WinRT 関係の一切を閉じ込めるためのスレッドハンドラ
     void _WinRTClosureThreadHandler(
-        const WINRT_CLOSURE_INIT_PARAM& param
+        WINRT_CLOSURE_INIT_PARAM param,
+        ayc::ExceptionTunnel& exceptionTunnel
     )
     {
         try
@@ -598,24 +635,24 @@ namespace
         }
         catch (const ayc::GeneralError& e)
         {
-            ayc::PrintPython(e.ToString().c_str());
+            exceptionTunnel.ThrowIn(e);
         }
         catch (const std::exception& e)
         {
-            ayc::PrintPython(
-                MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION("Unhandled C++ Exception", e).ToString().c_str()
+            exceptionTunnel.ThrowIn(
+                MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION("Unhandled C++ Exception", e)
             );
         }
         catch (const winrt::hresult_error& e)
         {
-            ayc::PrintPython(
-                MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION("Unhandled WinRT Exception", e).ToString().c_str()
+            exceptionTunnel.ThrowIn(
+                MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION("Unhandled WinRT Exception", e)
             );
         }
         catch (...)
         {
-            ayc::PrintPython(
-                MAKE_GENERAL_ERROR("Unhandled Unknown Exception").ToString().c_str()
+            exceptionTunnel.ThrowIn(
+                MAKE_GENERAL_ERROR("Unhandled Unknown Exception")
             );
         }
     }
@@ -629,8 +666,6 @@ namespace
 ayc::details::WGCSessionState::WGCSessionState(double holdInSec)
 : m_frameBuffer(holdInSec)
 , m_stopEvent(nullptr)
-, m_wrtClosureGuard()
-, m_wrtClosureException()
 {
     // 同期用イベントを生成
     {
@@ -655,16 +690,6 @@ ayc::details::WGCSessionState::~WGCSessionState()
 // 後始末
 void ayc::details::WGCSessionState::Close()
 {
-    // 例外が溜まってたらダンプ
-    {
-        auto e = PopException();
-        if (e.has_value())
-        {
-            ayc::PrintPython(
-                e.value().ToString().c_str()
-            );
-        }
-    }
     // 終了通知用イベントを破棄
     if (m_stopEvent)
     {
@@ -696,25 +721,6 @@ const HANDLE& ayc::details::WGCSessionState::GetStopEvent() const
 }
 
 //-----------------------------------------------------------------------------
-std::optional<ayc::GeneralError> ayc::details::WGCSessionState::PopException() const
-{
-    std::optional<ayc::GeneralError> result;
-    {
-        std::scoped_lock lock(m_wrtClosureGuard);
-        result = m_wrtClosureException;
-    }
-    return result;
-}
-
-//-----------------------------------------------------------------------------
-void ayc::details::WGCSessionState::SetException(const ayc::GeneralError& e)
-{
-    std::scoped_lock lock(m_wrtClosureGuard);
-    m_wrtClosureException = e;
-}
-
-
-//-----------------------------------------------------------------------------
 // WGCSession
 //-----------------------------------------------------------------------------
 
@@ -727,6 +733,7 @@ ayc::WGCSession::WGCSession(
 )
 : m_isClosed(false)
 , m_state(holdInSec)
+, m_exceptionTunnel()
 , m_wrtClosureThread()
 {
     // キャプチャスレッドを起動
@@ -740,7 +747,8 @@ ayc::WGCSession::WGCSession(
         };
         m_wrtClosureThread = std::thread(
             _WinRTClosureThreadHandler,
-            param
+            param,
+            std::ref(m_exceptionTunnel)
         );
     }
 }
@@ -780,44 +788,42 @@ void ayc::WGCSession::Close()
 }
 
 //-----------------------------------------------------------------------------
-ayc::com_ptr<ID3D11Texture2D> ayc::WGCSession::CopyFrame(double relativeInSec) const
+ayc::com_ptr<ID3D11Texture2D> ayc::WGCSession::CopyFrame(double relativeInSec)
 {
-    // 初期化前呼び出しチェック
-    if (m_isClosed)
-    {
-        throw MAKE_GENERAL_ERROR("WGCSession is not initialized or already closed");
-    }
-    // WinRT 閉じ込めスレッド上で例外が起きていればここから投げる
-    {
-        auto e = m_state.PopException();
-        if (e.has_value())
-        {
-            throw e.value();
-        }
-    }
-    // フレームを取得
+    _PreCondition();
     return m_state.GetFrameBuffer().GetFrame(relativeInSec);
 }
 
 //-----------------------------------------------------------------------------
 ayc::FreezedFrameBuffer ayc::WGCSession::CopyFrameBuffer(double durationInSec)
 {
+    _PreCondition();
+    return FreezedFrameBuffer(
+        m_state.GetFrameBuffer(),
+        durationInSec
+    );
+}
+
+//-----------------------------------------------------------------------------
+void ayc::WGCSession::_PreCondition()
+{
     // 初期化前呼び出しチェック
     if (m_isClosed)
     {
         throw MAKE_GENERAL_ERROR("WGCSession is not initialized or already closed");
     }
-    // WinRT 閉じ込めスレッド上で例外が起きていればここから投げる
+    // WinRT 閉じ込めスレッド上で例外が起きていればここから再送
+    try
     {
-        auto e = m_state.PopException();
-        if (e.has_value())
-        {
-            throw e.value();
-        }
+        m_exceptionTunnel.ThrowOut();
     }
-    // フレームを取得
-    return FreezedFrameBuffer(
-        m_state.GetFrameBuffer(),
-        durationInSec
-    );
+    catch (...)
+    {
+        /* @note:
+            ここに来たということは、スレッドは終了しているはず。
+            なので Close 呼んで確実に正常系にする。
+        */
+        Close();
+        throw;
+    }
 }

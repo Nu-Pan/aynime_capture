@@ -261,4 +261,80 @@ void ayc::ThrowGeneralErrorAsPython(const ayc::GeneralError& e)
     throw py::error_already_set();
 }
 
+//-----------------------------------------------------------------------------
+// ExceptionTunnel
+//-----------------------------------------------------------------------------
 
+//-----------------------------------------------------------------------------
+ayc::ExceptionTunnel::ExceptionTunnel()
+    : m_guard()
+    , m_exception()
+{
+    // nop
+}
+
+//-----------------------------------------------------------------------------
+ayc::ExceptionTunnel::~ExceptionTunnel()
+{
+    // トンネル内に取り残されている例外をテキストダンプ、握りつぶす
+    if (m_exception.has_value())
+    {
+        PrintPython(
+            std::format(
+                "In ExceptionTunnel::~ExceptionTunnel, exception is remaining. Show exception details below ...\n{}",
+                m_exception.value().ToString()
+            ).c_str()
+        );
+    }
+}
+
+//-----------------------------------------------------------------------------
+void ayc::ExceptionTunnel::ThrowIn(const GeneralError& e)
+{
+    // トンネル内に例外を入れる
+    bool isFull = false;
+    std::scoped_lock lock(m_guard);
+    {
+        if (m_exception.has_value())
+        {
+            isFull = true;
+        }
+        else
+        {
+            m_exception = e;
+        }
+    }
+    // トンネルが詰まってる場合、入れようとした例外をダンプして握りつぶす
+    /* @note:
+        トンネルに入れる例外は１つだけ。
+        時系列的に過去側の例外の方が根本原因のはずなので、
+        既にトンネルに居る例外を優先して残す。
+    */
+    if(isFull)
+    {
+        PrintPython(
+            std::format(
+                "In ExceptionTunnel::ThrowIn, tunnel is full. Show exception details below ...\n{}",
+                m_exception.value().ToString()
+            ).c_str()
+        );
+    }
+}
+
+//-----------------------------------------------------------------------------
+void ayc::ExceptionTunnel::ThrowOut()
+{
+    std::optional<GeneralError> e;
+    {
+        std::scoped_lock lock(m_guard);
+        if (m_exception.has_value())
+        {
+            e = m_exception;
+            m_exception = std::nullopt;
+        }
+    }
+    if (e.has_value())
+    {
+        throw e;
+    }
+}
