@@ -124,7 +124,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(PythonHome)libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>ucrt.lib;d3d11.lib;dxgi.lib;d3dcompiler.lib;WindowsApp.lib</AdditionalDependencies>
+      <AdditionalDependencies>ucrt.lib;d3d11.lib;dxgi.lib;d3dcompiler.lib;WindowsApp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>libucrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -147,7 +147,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <IgnoreSpecificDefaultLibraries>libucrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies>ucrt.lib;d3d11.lib;dxgi.lib;d3dcompiler.lib;WindowsApp.lib</AdditionalDependencies>
+      <AdditionalDependencies>ucrt.lib;d3d11.lib;dxgi.lib;d3dcompiler.lib;WindowsApp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(PythonHome)libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>

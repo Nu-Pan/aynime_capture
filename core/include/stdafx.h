@@ -11,13 +11,16 @@
 
 // winrt
 #include <winrt/base.h>
+#include <winrt/Windows.System.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Metadata.h>
 #include <winrt/Windows.Graphics.Capture.h>
 #include <winrt/Windows.Graphics.DirectX.h>
 #include <winrt/Windows.Graphics.DirectX.Direct3D11.h>
 
+
 // WindowsSDK
+#include <DispatcherQueue.h>
 #include <windows.graphics.capture.interop.h>
 #include <windows.graphics.directx.direct3d11.interop.h>
 
@@ -50,18 +53,24 @@ namespace ayc
 	using winrt::agile_ref;
 	using winrt::guid_of;
 	using winrt::put_abi;
+	using winrt::get_activation_factory;
 
-	// Foundation
+	// WinRT Foundation
 	using winrt::Windows::Foundation::TimeSpan;
 	using winrt::Windows::Foundation::Metadata::ApiInformation;
 
-	// Foundation IInspectable
+	// WinRT System
+	using winrt::Windows::System::DispatcherQueue;
+	using winrt::Windows::System::DispatcherQueueController;
+
+	// WinRT Foundation IInspectable
 	/* @note:
 		２つの名前空間に IInspectable が居るが、コイツラは他人。
 		非常に紛らわしいので、ここで区別可能な別名を作る。
 	*/
 	typedef ::IInspectable GlobalIIInspectable;
 	typedef winrt::Windows::Foundation::IInspectable WinRTIInspectable;
+
 
 	// WinRT Graphics
 	using winrt::Windows::Graphics::SizeInt32;

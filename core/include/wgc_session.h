@@ -5,6 +5,47 @@
 
 namespace ayc
 {
+	// 内部実装
+	namespace details
+	{
+		// WGCSession 内部ステートクラス
+		/* @note:
+			WGCSession 内部のあちこちで共通してアクセスするものをまとめたクラス。
+			WinRT を触るコードを独立した単一スレッドに閉じ込める必要があるので、
+			致し方なくこんな面倒なことになっている。
+		*/
+		class WGCSessionState
+		{
+		public:
+			// コンストラクタ
+			WGCSessionState(double holdInSec);
+
+			// デストラクタ
+			~WGCSessionState();
+
+			// 後始末
+			void Close();
+
+			// フレームバッファ
+			FrameBuffer& GetFrameBuffer();
+			const FrameBuffer& GetFrameBuffer() const;
+
+			// 終了通知イベント
+			const HANDLE& GetStopEvent() const;
+
+			// スレッド間例外通知
+			void SetException(const ayc::GeneralError& e);
+			std::optional<ayc::GeneralError> PopException() const;
+
+		private:
+			FrameBuffer m_frameBuffer;
+			HANDLE m_stopEvent;
+			mutable std::mutex m_wrtClosureGuard;
+			std::optional<ayc::GeneralError> m_wrtClosureException;
+		};
+	}
+
+	// Windows.Graphics.Capture セッションクラス
 	class WGCSession
 	{
 	public:
@@ -28,40 +69,9 @@ namespace ayc
 		// バックバッファのコピー（スナップショット）を得る
 		FreezedFrameBuffer CopyFrameBuffer(double durationInSec);
 
-		// バックバッファ保持秒数を取得
-		double GetHoldInSec() const
-		{
-			return m_holdInSec;
-		}
-
 	private:
-		// フレーム到着ハンドラ
-		void OnFrameArrived(
-			const Direct3D11CaptureFramePool& sender,
-			const WinRTIInspectable& args
-		);
-
-		// Settings
-		std::optional<std::size_t> m_maxWidth;
-		std::optional<std::size_t> m_maxHeight;
-
-		// Status
-		bool			m_isRunning;
-		ayc::SizeInt32	m_latestContentSize;
-
-		// WinRT Objects
-		ayc::agile_ref<Direct3D11CaptureFramePool>	m_framePool;
-		FrameArrived_revoker						m_revoker;
-		ayc::agile_ref<GraphicsCaptureSession>		m_captureSession;
-
-		// Frame Buffers
-		double		m_holdInSec;
-		FrameBuffer	m_frameBuffer;
-
-		// OnFrameArrived
-		mutable std::mutex					m_frameHandlerGuard;
-		std::optional<ayc::GeneralError>	m_frameHandlerException;
+		bool m_isClosed;
+		details::WGCSessionState m_state;
+		std::thread m_wrtClosureThread;
 	};
 }
-
-

@@ -69,7 +69,7 @@ ayc::TimeSpan ayc::NowFromQPC()
 }
 
 //-----------------------------------------------------------------------------
-// GeneralError
+// Windows
 //-----------------------------------------------------------------------------
 
 std::string ayc::HresultToString(HRESULT hresultValue)
@@ -153,7 +153,7 @@ void ayc::PrintPython(const char* const pMessage)
     {
         return;
     }
-    // python み初期化なら何もしない
+    // python 未初期化なら何もしない
     if (!Py_IsInitialized())
     {
         return;
@@ -225,6 +225,27 @@ const std::stacktrace& ayc::GeneralError::GetStackTrace() const
 {
     return m_stackTrace;
 }
+
+//-----------------------------------------------------------------------------
+std::string ayc::GeneralError::ToString() const
+{
+    return std::format(
+        "---- GeneralError ----\n"
+        "description: {}\n"
+        "from: \"{}\", line {}\n"
+        "{} = {}\n"
+        "stacktrack:\n"
+        "{}\n"
+        "----------------------\n",
+        this->m_description,
+        this->m_file,
+        this->m_line,
+        this->m_errorKey,
+        this->m_errorValue,
+        this->m_stackTrace
+    );
+}
+
 
 //-----------------------------------------------------------------------------
 void ayc::ThrowGeneralErrorAsPython(const ayc::GeneralError& e)

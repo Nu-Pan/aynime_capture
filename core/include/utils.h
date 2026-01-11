@@ -69,6 +69,9 @@ namespace ayc
         // エラーを検出した時のスタックトレースを取得
         const std::stacktrace& GetStackTrace() const;
 
+        // 例外の内容を人間が読める文字列に変換
+        std::string ToString() const;
+
     private:
         std::string     m_description;
         std::string     m_file;
@@ -300,7 +303,7 @@ namespace ayc
     )
 
 // WinRT 呼び出し用ユーティリティ
-// @note: winrtLambda 内で発生した WinRT 例外が GeneralError に変換される
+// @note: winrtLambda 内で発生した WinRT 例外が GeneralError に変換・再送される
 #define TRY_WINRT(winrtLambda) \
     { \
         try \
@@ -314,7 +317,7 @@ namespace ayc
     }
 
 // WinRT 呼び出し用ユーティリティ
-// @note: winrtLambda 内で発生した WinRT 例外が GeneralError に変換される
+// @note: winrtLambda 内で発生した WinRT 例外が GeneralError に変換・再送される
 #define TRY_WINRT_RET(winrtLambda) \
     [&]() \
     { \
@@ -327,3 +330,17 @@ namespace ayc
             throw MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION(#winrtLambda, e); \
         } \
     }();
+
+// WinRT 呼び出し用ユーティリティ
+// @note: winrtLambda 内で発生した WinRT 例外が GeneralError に変換・その場でテキストダンプされる
+#define TRY_WINRT_NOTHROW(winrtLambda) \
+    { \
+        try \
+        { \
+            winrtLambda(); \
+        } \
+        catch(const winrt::hresult_error& e) \
+        { \
+            ayc::PrintPython(MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION(#winrtLambda, e).ToString().c_str()); \
+        } \
+    }

@@ -18,7 +18,6 @@ namespace
 {
 	ayc::com_ptr<ID3D11Device> s_d3dDevice;
     ayc::com_ptr<ID3D11DeviceContext> s_d3dContext;
-    ayc::agile_ref<ayc::IDirect3DDevice> s_wrtDevice;
 }
 
 //-----------------------------------------------------------------------------
@@ -83,23 +82,6 @@ void ayc::Initialize()
             throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to D3D11CreateDevice.", result);
         }
     }
-    // WinRT デバイス生成
-    {
-        const auto dxgiDevice = TRY_WINRT_RET(
-            [&]() { return s_d3dDevice.as<IDXGIDevice>(); }
-        );
-        ayc::IDirect3DDevice wrtDevice{ nullptr };
-        const HRESULT result = CreateDirect3D11DeviceFromDXGIDevice(
-            dxgiDevice.get(),
-            reinterpret_cast<::IInspectable**>(winrt::put_abi(wrtDevice))
-        );
-        if (result != S_OK)
-        {
-            Finalize();
-            throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateDirect3D11DeviceFromDXGIDevice.", result);
-        }
-        s_wrtDevice = wrtDevice;
-    }
 }
 
 //-----------------------------------------------------------------------------
@@ -107,17 +89,8 @@ void ayc::Initialize()
 void ayc::Finalize()
 {
     // 各インスタンスを解放
-    if (s_wrtDevice)
-    {
-        s_wrtDevice.get().Close();
-        s_wrtDevice = {};
-    }
     s_d3dContext = nullptr;
     s_d3dDevice = nullptr;
-
-    // WinRT も後始末
-    winrt::clear_factory_cache();
-    winrt::uninit_apartment();
 }
 
 //-----------------------------------------------------------------------------
@@ -132,11 +105,4 @@ const ayc::com_ptr<ID3D11Device>& ayc::D3DDevice()
 const ayc::com_ptr<ID3D11DeviceContext>& ayc::D3DContext()
 {
     return s_d3dContext;
-}
-
-//-----------------------------------------------------------------------------
-// WinRT D3D Device
-ayc::IDirect3DDevice ayc::WRTDevice()
-{
-    return s_wrtDevice.get();
 }
