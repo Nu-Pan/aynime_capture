@@ -16,16 +16,18 @@ ext_modules = [
         ],
         include_dirs=["core/include"],
         libraries=[
+            "user32",
+            "WindowsApp",
             "d3d11",
             "dxgi",
-            "WindowsApp",
             "d3dcompiler",
         ],
         extra_compile_args=[
             "/EHsc",
             "/std:c++latest",
             "/O2",
-            "/Oi" "/GL",
+            "/Oi",
+            "/GL",
             "/DNDEBUG",
         ],
     )
