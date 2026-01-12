@@ -394,6 +394,14 @@ PYBIND11_MODULE(_aynime_capture, m) {
         }
     );
 
+    // logging
+    m.def(
+        "set_log_handle",
+        &ayc::SetLogHandle,
+        py::arg("handle"),
+        "Set log output handle (Windows HANDLE)."
+    );
+
     // Session
     py::class_<ayc::Session>(m, "Session", py::module_local())
         .def(

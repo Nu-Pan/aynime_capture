@@ -1,6 +1,14 @@
 ﻿#pragma once
 
 //-------------------------------------------------------------------------
+// Forward Declaration
+//-------------------------------------------------------------------------
+namespace ayc
+{
+    class GeneralError;
+}
+
+//-------------------------------------------------------------------------
 // std
 //-------------------------------------------------------------------------
 namespace ayc
@@ -35,8 +43,11 @@ namespace ayc
 //-------------------------------------------------------------------------
 namespace ayc
 {
+    // ログ出力先を設定する
+    void SetLogHandle(uintptr_t h);
+
     // Python の stdout にメッセージを出力する
-    void PrintPython(const char* const pMessage);
+    void WriteLog(const std::string& message);
 }
 
 //-------------------------------------------------------------------------
@@ -310,6 +321,48 @@ namespace ayc
         std::stacktrace::current()\
     )
 
+// 例外表示用ユーティリティ(GeneralError 用)
+#define WRITE_LOG_GENERAL_ERROR(msg, e) \
+    { \
+        ayc::WriteLog( \
+            std::format( \
+                "{}\n{}", \
+                msg, \
+                e.ToString().c_str() \
+            ) \
+        ); \
+    }
+
+// 例外表示用ユーティリティ(std::exception 用)
+#define WRITE_LOG_CPP_EXCEPTION(msg, e) \
+    { \
+        ayc::WriteLog( \
+            std::format( \
+                "{}\n{}", \
+                msg, \
+                MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION( \
+                    "from C++ Exception in WRITE_LOG_CPP_EXCEPTION", \
+                    e \
+                ).ToString().c_str() \
+            ) \
+        ); \
+    }
+
+// 例外表示用ユーティリティ(std::exception 用)
+#define WRITE_LOG_WINRT_EXCEPTION(msg, e) \
+    { \
+        ayc::WriteLog( \
+            std::format( \
+                "{}\n{}", \
+                msg, \
+                MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION( \
+                    "from C++ Exception in WRITE_LOG_WINRT_EXCEPTION", \
+                    e \
+                ).ToString().c_str() \
+            ) \
+        ); \
+    }
+
 // WinRT 呼び出し用ユーティリティ
 // @note: winrtLambda 内で発生した WinRT 例外が GeneralError に変換・再送される
 #define TRY_WINRT(winrtLambda) \
@@ -349,10 +402,9 @@ namespace ayc
         } \
         catch(const winrt::hresult_error& e) \
         { \
-            ayc::PrintPython(MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION(#winrtLambda, e).ToString().c_str()); \
+            WRITE_LOG_WINRT_EXCEPTION(#winrtLambda, e); \
         } \
     }
-
 
 //-------------------------------------------------------------------------
 // ExceptionTunnel

@@ -132,18 +132,14 @@ namespace
         {
             try
             {
-                // @note: デバッグ用、後で消す
-                //throw MAKE_GENERAL_ERROR("TEST FOR DEBUG");
-                throw MAKE_GENERAL_ERROR_FROM_HRESULT("DEBUG", S_OK);
-
                 // @todo _WinRTClosureThreadHandler 側でまとめてハンドルできるつもりだけど本当？
                 // アパートメントタイプをデバッグ用にダンプ
                 {
                     static bool s_hasShown = false;
                     if (!s_hasShown)
                     {
-                        ayc::PrintPython(
-                            ayc::ComApartmenTypeDiagnosticInfo("_OnFrameArrived::Handler").c_str()
+                        ayc::WriteLog(
+                            ayc::ComApartmenTypeDiagnosticInfo("_OnFrameArrived::Handler")
                         );
                         s_hasShown = true;
                     }
@@ -304,8 +300,143 @@ namespace
     };
 
     //-----------------------------------------------------------------------------
+    // DispatcherQueue シャットダウン関数
+    void _ShutdownDispatcherQueueController(
+        ayc::DispatcherQueueController& dqc
+    )
+    {
+        /* @note:
+            例外によるアンワインド中に呼び出される可能性があるので、この関数から例外は出せない。
+            Best-Effort 的に振る舞い、可能な限りマシに終了する。
+        */
+        // dqc シャットダウン完了待機機構を一通り用意
+        HANDLE shutdownDoneReciever = nullptr;
+        std::thread shutdownWaitingThread;
+        {
+            // dqc にシャットダウンを要求
+            auto shutdownAction = (
+                dqc.ShutdownQueueAsync()
+            );
+            // dqc シャットダウン同期用イベント（送信側）
+            HANDLE shutdownDoneSender = nullptr;
+            {
+                shutdownDoneSender = CreateEvent(
+                    /*lpEventAttributes=*/nullptr,
+                    /*bManualReset=*/TRUE,
+                    /*bInitialState=*/FALSE,
+                    /*lpName=*/nullptr
+                );
+                if (!shutdownDoneSender)
+                {
+                    // @note: 続行不能なので、ログだけ出して断念
+                    ayc::WriteLog("Failed to CreateEvent in _ShutdownDispatcherQueueController");
+                    return;
+                }
+            }
+            // dqc シャットダウン同期用イベント（受信側）
+            {
+                const BOOL result = DuplicateHandle(
+                    GetCurrentProcess(),
+                    shutdownDoneSender,
+                    GetCurrentProcess(),
+                    &shutdownDoneReciever,
+                    0,
+                    FALSE,
+                    DUPLICATE_SAME_ACCESS
+                );
+                if (!result)
+                {
+                    // @note: 続行不能なので、ログだけ出して断念
+                    CloseHandle(shutdownDoneSender);
+                    ayc::WriteLog("Failed to DuplicateHandle in _ShutdownDispatcherQueueController");
+                    return;
+                }
+            }
+            // dqc シャットダウン完了を別スレッドで待機、完了したらイベントで通知
+            try
+            {
+                shutdownWaitingThread = std::thread(
+                    [shutdownAction, shutdownDoneSender]() mutable
+                    {
+                        TRY_WINRT_NOTHROW((
+                            [&]() { shutdownAction.get(); }
+                            ));
+                        SetEvent(shutdownDoneSender);
+                        CloseHandle(shutdownDoneSender);
+                    }
+                );
+            }
+            catch (const std::exception& e)
+            {
+                CloseHandle(shutdownDoneSender);
+                CloseHandle(shutdownDoneReciever);
+                WRITE_LOG_CPP_EXCEPTION("Failed to create std::thread in _ShutdownDispatcherQueueController", e);
+                return;
+            }
+        }
+        // dqc シャットダウン完了までメッセージをポンプ
+        {
+            MSG msg{};
+            for (;;)
+            {
+                const DWORD wait = MsgWaitForMultipleObjects(
+                    1,
+                    &shutdownDoneReciever,
+                    /*fWailtAll=*/FALSE,
+                    /*dwMilliseconds=*/INFINITE,
+                    /*dwWakeMask=*/QS_ALLINPUT
+                );
+                if (wait == WAIT_OBJECT_0)
+                {
+                    // @note: シャットダウン完了
+                    break;
+                }
+                else if (wait == WAIT_OBJECT_0 + 1)
+                {
+                    // @note: メッセージ処理
+                    for (;;)
+                    {
+                        const bool peekResult = PeekMessage(
+                            &msg,
+                            /*hWnd=*/nullptr,
+                            /*wMsgFilterMin=*/0,
+                            /*wMsgFilterMax=*/0,
+                            /*wRemoveMsg=*/PM_REMOVE
+                        );
+                        if (!peekResult)
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            TranslateMessage(&msg);
+                            DispatchMessage(&msg);
+                        }
+                    }
+                }
+                else
+                {
+                    /* @note:
+                        WAIT_FAILED も含めて異常系は待機中止とみなす。
+                        スレッドは detach して std::terminate を回避、スレッドが残っちゃうのは諦める。
+                    */
+                    shutdownWaitingThread.detach();
+                    CloseHandle(shutdownDoneReciever);
+                    ayc::WriteLog("MsgWaitForMultipleObjects has failed in _ShutdownDispatcherQueueController");
+                    return;
+                }
+            }
+        }
+        // dqc シャットダウン待機スレッドの終了を待機
+        {
+            shutdownWaitingThread.join();
+            CloseHandle(shutdownDoneReciever);
+        }
+    }
+
+    //-----------------------------------------------------------------------------
     // WniRT 閉じ込め部分初期化パラメータ
-    struct WINRT_CLOSURE_INIT_PARAM
+    struct _WINRT_CLOSURE_INIT_PARAM
     {
         HWND hwnd;
         std::optional<std::size_t> maxWidth;
@@ -323,15 +454,15 @@ namespace
     {
     public:
         // コンストラクタ
-        _WinRTClosureConcrete(const WINRT_CLOSURE_INIT_PARAM& param)
-        : m_state(param.state)
-        , m_exceptionTunnel()
-        , m_dqc(nullptr)
-        , m_wrtDevice(nullptr)
-        , m_framePool(nullptr)
-        , m_pOnFrameArrived(nullptr)
-        , m_revoker()
-        , m_captureSession(nullptr)
+        _WinRTClosureConcrete(const _WINRT_CLOSURE_INIT_PARAM& param)
+            : m_state(param.state)
+            , m_exceptionTunnel()
+            , m_wrtDevice(nullptr)
+            , m_dqc(nullptr)
+            , m_pOnFrameArrived(nullptr)
+            , m_framePool(nullptr)
+            , m_captureSession(nullptr)
+            , m_revoker()
         {
             // WinRT 初期化
             {
@@ -341,8 +472,8 @@ namespace
             }
             // アパートメントタイプをデバッグ用にダンプ
             {
-                ayc::PrintPython(
-                    ayc::ComApartmenTypeDiagnosticInfo("ayc::Initialize").c_str()
+                ayc::WriteLog(
+                    ayc::ComApartmenTypeDiagnosticInfo("ayc::_WinRTClosureConcrete::_WinRTClosureConcrete")
                 );
             }
             // 必要機能が未サポートならエラー
@@ -353,6 +484,26 @@ namespace
                 if (!isGcsSupported)
                 {
                     throw MAKE_GENERAL_ERROR("GraphicsCaptureSession is not Supported.");
+                }
+            }
+            // WinRT D3D11 Device
+            {
+                const auto dxgiDevice = TRY_WINRT_RET((
+                    [&]() { return ayc::d3d11::Device().as<IDXGIDevice>(); }
+                    ));
+                const HRESULT result = TRY_WINRT_RET((
+                    [&]()
+                    {
+                        return CreateDirect3D11DeviceFromDXGIDevice
+                        (
+                            dxgiDevice.get(),
+                            reinterpret_cast<::IInspectable**>(ayc::put_abi(m_wrtDevice))
+                        );
+                    }
+                    ));
+                if (result != S_OK)
+                {
+                    throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateDirect3D11DeviceFromDXGIDevice.", result);
                 }
             }
             // DispatcherQueueController 生成
@@ -374,26 +525,6 @@ namespace
                 if (result != S_OK)
                 {
                     throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateDispatcherQueueController", result);
-                }
-            }
-            // WinRT D3D11 Device
-            {
-                const auto dxgiDevice = TRY_WINRT_RET((
-                    [&]() { return ayc::d3d11::Device().as<IDXGIDevice>(); }
-                ));
-                const HRESULT result = TRY_WINRT_RET((
-                    [&]()
-                    {
-                        return CreateDirect3D11DeviceFromDXGIDevice
-                        (
-                            dxgiDevice.get(),
-                            reinterpret_cast<::IInspectable**>(ayc::put_abi(m_wrtDevice))
-                        );
-                    }
-                ));
-                if (result != S_OK)
-                {
-                    throw MAKE_GENERAL_ERROR_FROM_HRESULT("Failed to CreateDirect3D11DeviceFromDXGIDevice.", result);
                 }
             }
             // キャプチャアイテム生成
@@ -427,6 +558,19 @@ namespace
             const auto captureItemSize = TRY_WINRT_RET((
                 [&]() { return captureItem.Size(); }
             ));
+            // ハンドラーインスタンス生成
+            {
+                m_pOnFrameArrived.reset(
+                    new _OnFrameArrived(
+                        m_wrtDevice,
+                        m_state,
+                        m_exceptionTunnel,
+                        captureItemSize,
+                        param.maxWidth,
+                        param.maxHeight
+                    )
+                );
+            }
             // フレームプール生成
             /* @note:
                 フレームプールのレベルではアルファチャンネルを切ることはできない
@@ -442,31 +586,6 @@ namespace
                     );
                 }
             ));
-            // ハンドラーインスタンス生成
-            {
-                m_pOnFrameArrived.reset(
-                    new _OnFrameArrived(
-                        m_wrtDevice,
-                        m_state,
-                        m_exceptionTunnel,
-                        captureItemSize,
-                        param.maxWidth,
-                        param.maxHeight
-                    )
-                );
-            }
-            // フレーム到達ハンドラ登録
-            {
-                m_revoker = TRY_WINRT_RET((
-                    [&]()
-                    {
-                        return m_framePool.FrameArrived(
-                            winrt::auto_revoke,
-                            { m_pOnFrameArrived.get(), &_OnFrameArrived::Handler}
-                        );
-                    }
-                ));
-            }
             // セッション生成
             {
                 m_captureSession = TRY_WINRT_RET((
@@ -485,13 +604,31 @@ namespace
                     [&]() { m_captureSession.StartCapture(); }
                 ));
             }
+            // フレーム到達ハンドラ登録
+            {
+                m_revoker = TRY_WINRT_RET((
+                    [&]()
+                    {
+                        return m_framePool.FrameArrived(
+                            winrt::auto_revoke,
+                            { m_pOnFrameArrived.get(), &_OnFrameArrived::Handler }
+                        );
+                    }
+                    ));
+            }
         }
 
         // デストラクタ
         ~_WinRTClosureConcrete()
         {
+            // ハンドラ登録解除
+            {
+                TRY_WINRT_NOTHROW((
+                    [&]() { m_revoker.revoke(); }
+                ));
+            }
             // セッション停止
-            if(m_captureSession)
+            if (m_captureSession)
             {
                 TRY_WINRT_NOTHROW((
                     [&]()
@@ -499,21 +636,10 @@ namespace
                         m_captureSession.Close();
                         m_captureSession = nullptr;
                     }
-                ));
-            }
-            // ハンドラ登録解除
-            {
-                // @todo: これどういうこと？
-                TRY_WINRT_NOTHROW((
-                    [&]() { m_revoker.revoke(); }
-                ));
-            }
-            // ハンドラーインスタンス後始末
-            {
-                m_pOnFrameArrived.reset();
+                    ));
             }
             // フレームプール後始末
-            if(m_framePool)
+            if (m_framePool)
             {
                 TRY_WINRT_NOTHROW((
                     [&]()
@@ -523,6 +649,16 @@ namespace
                     }
                 ));
             }
+            // ハンドラーインスタンス後始末
+            {
+                m_pOnFrameArrived.reset();
+            }
+            // DispatcherQueue
+            if (m_dqc)
+            {
+                _ShutdownDispatcherQueueController(m_dqc);
+                m_dqc = nullptr;;
+            }
             // WinRT D3D11 Device
             if (m_wrtDevice)
             {
@@ -531,17 +667,6 @@ namespace
                     {
                         m_wrtDevice.Close();
                         m_wrtDevice = nullptr;
-                    }
-                ));
-            }
-            // DispatcherQueue
-            if (m_dqc)
-            {
-                TRY_WINRT_NOTHROW((
-                    [&]()
-                    {
-                        m_dqc.ShutdownQueueAsync();
-                        m_dqc = nullptr;
                     }
                 ));
             }
@@ -630,18 +755,18 @@ namespace
         ayc::ExceptionTunnel            m_exceptionTunnel;
 
         // WinRT オブジェクト
-        ayc::DispatcherQueueController      m_dqc;
         ayc::IDirect3DDevice                m_wrtDevice;
-        ayc::Direct3D11CaptureFramePool     m_framePool;
+        ayc::DispatcherQueueController      m_dqc;
         std::unique_ptr<_OnFrameArrived>    m_pOnFrameArrived;
-        ayc::FrameArrived_revoker	        m_revoker;
+        ayc::Direct3D11CaptureFramePool     m_framePool;
         ayc::GraphicsCaptureSession		    m_captureSession;
+        ayc::FrameArrived_revoker	        m_revoker;
     };
 
     //-----------------------------------------------------------------------------
     // WinRT 関係の一切を閉じ込めるためのスレッドハンドラ
     void _WinRTClosureThreadHandler(
-        WINRT_CLOSURE_INIT_PARAM param,
+        _WINRT_CLOSURE_INIT_PARAM param,
         ayc::ExceptionTunnel& exceptionTunnel
     )
     {
@@ -755,7 +880,7 @@ ayc::WGCSession::WGCSession(
 {
     // キャプチャスレッドを起動
     {
-        const WINRT_CLOSURE_INIT_PARAM param =
+        const _WINRT_CLOSURE_INIT_PARAM param =
         {
             hwnd,
             maxWidth,

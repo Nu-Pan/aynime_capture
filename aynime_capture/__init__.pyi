@@ -2,20 +2,28 @@
 
 from typing import Optional
 
+def set_log_handle(handle: int) -> None:
+    """ログ出力を設定する
+
+    Args:
+        handle: 出力先 Windows HANDLE で、匿名パイプを想定。
+    """
+    ...
+
 class Session:
-    """Capture session.
+    """キャプチャセッション
 
     このクラスのインスタンスが存命の間、
     バックグラウンドスレッド上でキャプチャが継続して実行されます。
     """
 
     def __init__(
-            self,
-            hwnd: int,
-            duration_in_sec: float,
-            max_width: Optional[int],
-            max_height: Optional[int]
-        ) -> None:
+        self,
+        hwnd: int,
+        duration_in_sec: float,
+        max_width: Optional[int],
+        max_height: Optional[int],
+    ) -> None:
         """キャプチャセッションを開始する。
 
         Args:
@@ -31,11 +39,8 @@ class Session:
         ...
 
     def GetFrameByTime(
-        self,
-        time_in_sec: float
-    ) -> tuple[
-        Optional[int], Optional[int], Optional[bytes]
-    ]:
+        self, time_in_sec: float
+    ) -> tuple[Optional[int], Optional[int], Optional[bytes]]:
         """指定した相対時刻に最も近いフレームを取得する。
 
         Args:
@@ -47,9 +52,8 @@ class Session:
         """
         ...
 
-
 class Snapshot:
-    """A snapshot of the capture buffer.
+    """キャプチャバッファスナップショット
 
     生成時点のバックバッファを固定したスナップショットを表します。
     バックグラウンドのキャプチャ処理の影響を受けません。

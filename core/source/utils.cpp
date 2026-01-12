@@ -192,27 +192,54 @@ std::string ayc::ComApartmenTypeDiagnosticInfo(const char* const pLabel)
     );
 }
 
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 // Python
-//-------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
-//-------------------------------------------------------------------------
-void ayc::PrintPython(const char* const pMessage)
+namespace
+{
+    static std::atomic<HANDLE> s_logHandle{ nullptr };
+}
+
+//-----------------------------------------------------------------------------
+void ayc::SetLogHandle(uintptr_t h)
+{
+    s_logHandle.store(reinterpret_cast<HANDLE>(h));
+}
+
+//-----------------------------------------------------------------------------
+void ayc::WriteLog(const std::string& message)
 {
     // 空文字列ならスキップ
-    if (!pMessage || !*pMessage)
+    if (message.empty())
     {
         return;
     }
-    // python 未初期化なら何もしない
-    if (!Py_IsInitialized())
+    // ログ出力
+    const HANDLE h = s_logHandle.load();
+    if (h)
     {
-        return;
+        // ハンドル設定済みならそれに書く
+        DWORD written = 0;
+        WriteFile(
+            h,
+            message.c_str(),
+            static_cast<DWORD>(message.size()),
+            &written,
+            nullptr
+        );
+        WriteFile(
+            h,
+            "\n",
+            1,
+            &written,
+            nullptr
+        );
     }
-    // GIL 取って print
+    else
     {
-        py::gil_scoped_acquire gil;
-        py::print(pMessage);
+        // ハンドル未設定なら stdout に流す
+        std::cout << message << std::endl;
     }
 }
 
@@ -330,11 +357,9 @@ ayc::ExceptionTunnel::~ExceptionTunnel()
     // トンネル内に取り残されている例外をテキストダンプ、握りつぶす
     if (m_exception.has_value())
     {
-        PrintPython(
-            std::format(
-                "In ExceptionTunnel::~ExceptionTunnel, exception is remaining. Show exception details below ...\n{}",
-                m_exception.value().ToString()
-            ).c_str()
+        WRITE_LOG_GENERAL_ERROR(
+            "In ExceptionTunnel::~ExceptionTunnel, exception is remaining.",
+            m_exception.value()
         );
     }
 }
@@ -363,11 +388,9 @@ void ayc::ExceptionTunnel::ThrowIn(const GeneralError& e)
     */
     if(isFull)
     {
-        PrintPython(
-            std::format(
-                "In ExceptionTunnel::ThrowIn, tunnel is full. Show exception details below ...\n{}",
-                m_exception.value().ToString()
-            ).c_str()
+        WRITE_LOG_GENERAL_ERROR(
+            "In ExceptionTunnel::ThrowIn, tunnel is full.",
+            m_exception.value()
         );
     }
 }
