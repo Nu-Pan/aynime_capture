@@ -133,7 +133,8 @@ namespace
             try
             {
                 // @note: デバッグ用、後で消す
-                // throw MAKE_GENERAL_ERROR("TEST FOR DEBUG");
+                //throw MAKE_GENERAL_ERROR("TEST FOR DEBUG");
+                throw MAKE_GENERAL_ERROR_FROM_HRESULT("DEBUG", S_OK);
 
                 // @todo _WinRTClosureThreadHandler 側でまとめてハンドルできるつもりだけど本当？
                 // アパートメントタイプをデバッグ用にダンプ

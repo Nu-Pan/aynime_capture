@@ -13,6 +13,9 @@ namespace ayc
 
     // 現在時刻を QPC から得る
     TimeSpan NowFromQPC();
+
+    // wchar --> char
+    std::string WideToUtf8(std::wstring_view wide);
 }
 
 //-------------------------------------------------------------------------
@@ -230,7 +233,7 @@ namespace ayc
     {
         const HRESULT hresultValue = raisedException.code().value;
         const auto raisedExceptionTypeName = typeid(raisedException).name();
-        const auto raisedExceptionMessage = winrt::to_string(raisedException.message());
+        const auto raisedExceptionMessage = ayc::WideToUtf8(raisedException.message());
         return GeneralError
         (
             pDescription,

@@ -18,7 +18,7 @@ namespace py = pybind11;
 // std
 //-----------------------------------------------------------------------------
 
-// 現在時刻を QPC から得る
+//-----------------------------------------------------------------------------
 ayc::TimeSpan ayc::NowFromQPC()
 {
     // TimeSpan の分解能
@@ -69,9 +69,60 @@ ayc::TimeSpan ayc::NowFromQPC()
 }
 
 //-----------------------------------------------------------------------------
+std::string ayc::WideToUtf8(std::wstring_view wide)
+{
+    // 空文字列の場合
+    if (wide.empty())
+    {
+        return {};
+    }
+    // 変換後の必要バイト数を計算
+    const int required = ::WideCharToMultiByte(
+        CP_UTF8,
+        WC_ERR_INVALID_CHARS,
+        wide.data(),
+        static_cast<int>(wide.size()),
+        nullptr,
+        0,
+        nullptr,
+        nullptr
+    );
+    if (required == 0)
+    {
+        throw MAKE_GENERAL_ERROR_FROM_HRESULT(
+            "WideCharToMultiByte(size query) failed",
+            HRESULT_FROM_WIN32(::GetLastError())
+        );
+    }
+    // 変換を実行
+    std::string out(static_cast<std::size_t>(required), '\0');
+    const int written = ::WideCharToMultiByte(
+        CP_UTF8,
+        WC_ERR_INVALID_CHARS,
+        wide.data(),
+        static_cast<int>(wide.size()),
+        out.data(),
+        required,
+        nullptr,
+        nullptr
+    );
+    if (written == 0)
+    {
+        throw MAKE_GENERAL_ERROR_FROM_HRESULT(
+            "WideCharToMultiByte(convert) failed",
+            HRESULT_FROM_WIN32(::GetLastError())
+        );
+    }
+    // 正常終了
+    return out;
+}
+
+
+//-----------------------------------------------------------------------------
 // Windows
 //-----------------------------------------------------------------------------
 
+//-----------------------------------------------------------------------------
 std::string ayc::HresultToString(HRESULT hresultValue)
 {
     // 説明文字列を問い合わせる
@@ -104,7 +155,7 @@ std::string ayc::HresultToString(HRESULT hresultValue)
             }
             break;
         }
-        hresultMessage = winrt::to_string(wideMessage);
+        hresultMessage = ayc::WideToUtf8(wideMessage);
     }
     else
     {
@@ -124,7 +175,7 @@ std::string ayc::HresultToString(HRESULT hresultValue)
     );
 }
 
-// COM のアパアート面と種別診断情報を文字列で取得
+//-----------------------------------------------------------------------------
 std::string ayc::ComApartmenTypeDiagnosticInfo(const char* const pLabel)
 {
     const DWORD tid = ::GetCurrentThreadId();
@@ -335,6 +386,6 @@ void ayc::ExceptionTunnel::ThrowOut()
     }
     if (e.has_value())
     {
-        throw e;
+        throw e.value();
     }
 }
