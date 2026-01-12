@@ -43,6 +43,7 @@
 #include <stacktrace>
 #include <stdexcept>
 #include <sstream>
+#include <iostream>
 
 // Type Alias
 namespace ayc
