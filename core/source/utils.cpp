@@ -334,7 +334,13 @@ void ayc::ThrowGeneralErrorAsPython(const ayc::GeneralError& e)
     payload["line"] = e.GetLine();
     payload["error_key"] = e.GetErrorKey();
     payload["error_value"] = e.GetErrorValue();
-    payload["stack_trace"] = std::format("{}", e.GetStackTrace());
+    py::list frames;
+    const auto& st = e.GetStackTrace();
+    for (const auto& frame : st)
+    {
+        frames.append(std::format("{}", frame));
+    }
+    payload["stack_trace"] = frames;
     PyErr_SetObject(PyExc_RuntimeError, payload.ptr());
     throw py::error_already_set();
 }
