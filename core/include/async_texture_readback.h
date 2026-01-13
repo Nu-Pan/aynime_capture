@@ -8,7 +8,7 @@ namespace ayc
 		std::size_t& outWidth,
 		std::size_t& outHeight,
 		std::string& outBuffer,
-		const ayc::com_ptr<ID3D11Texture2D>& pSourceTexture
+		const wgc::com_ptr<ID3D11Texture2D>& pSourceTexture
 	);
 
 	// GPU テクスチャのメインメモリへの読み出しを非同期で行うクラス
@@ -24,7 +24,7 @@ namespace ayc
 
 		// コンストラクタ
 		AsyncTextureReadback(
-			const std::vector<ayc::com_ptr<ID3D11Texture2D>>& sourceTextures
+			const std::vector<wgc::com_ptr<ID3D11Texture2D>>& sourceTextures
 		);
 
 		// デストラクタ
@@ -41,7 +41,7 @@ namespace ayc
 		// 転送結果の取得権オブジェクト
 		struct _JOB
 		{
-			ayc::com_ptr<ID3D11Texture2D>	pSourceTexture;
+			wgc::com_ptr<ID3D11Texture2D>	pSourceTexture;
 			RESULT							result;
 			bool							completed;
 		};

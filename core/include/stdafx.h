@@ -18,7 +18,6 @@
 #include <winrt/Windows.Graphics.DirectX.h>
 #include <winrt/Windows.Graphics.DirectX.Direct3D11.h>
 
-
 // WindowsSDK
 #include <DispatcherQueue.h>
 #include <windows.graphics.capture.interop.h>
@@ -45,8 +44,8 @@
 #include <sstream>
 #include <iostream>
 
-// Type Alias
-namespace ayc
+// Type Alias for Windows.Graphics.Capture
+namespace wgc
 {
 	// WinRT
 	using winrt::com_ptr;
@@ -69,7 +68,7 @@ namespace ayc
 		２つの名前空間に IInspectable が居るが、コイツラは他人。
 		非常に紛らわしいので、ここで区別可能な別名を作る。
 	*/
-	typedef ::IInspectable GlobalIIInspectable;
+	typedef ::IInspectable GlobalIInspectable;
 	typedef winrt::Windows::Foundation::IInspectable WinRTIInspectable;
 
 

@@ -21,7 +21,7 @@ void ayc::ReadbackTexture(
     std::size_t& outWidth,
     std::size_t& outHeight,
     std::string& outBuffer,
-    const ayc::com_ptr<ID3D11Texture2D>& pSourceTexture
+    const wgc::com_ptr<ID3D11Texture2D>& pSourceTexture
 )
 {
     // nullptr チェック
@@ -35,7 +35,7 @@ void ayc::ReadbackTexture(
         pSourceTexture->GetDesc(&srcDesc);
     }
     // 読み出し先テクスチャを生成
-    com_ptr<ID3D11Texture2D> stgTex;
+    wgc::com_ptr<ID3D11Texture2D> stgTex;
     {
         // 記述
         D3D11_TEXTURE2D_DESC stagingDesc = srcDesc;
@@ -117,7 +117,7 @@ void ayc::ReadbackTexture(
 
 //-----------------------------------------------------------------------------
 ayc::AsyncTextureReadback::AsyncTextureReadback(
-    const std::vector<ayc::com_ptr<ID3D11Texture2D>>& sourceTextures
+    const std::vector<wgc::com_ptr<ID3D11Texture2D>>& sourceTextures
 )
     : m_mutex()
     , m_cv()

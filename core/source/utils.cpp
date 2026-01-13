@@ -19,11 +19,11 @@ namespace py = pybind11;
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-ayc::TimeSpan ayc::NowFromQPC()
+wgc::TimeSpan ayc::NowFromQPC()
 {
     // TimeSpan の分解能
-    static_assert(ayc::TimeSpan::period::num == 1);
-    constexpr auto TIME_SPAN_FREQ = static_cast<LONGLONG>(ayc::TimeSpan::period::den);
+    static_assert(wgc::TimeSpan::period::num == 1);
+    constexpr auto TIME_SPAN_FREQ = static_cast<LONGLONG>(wgc::TimeSpan::period::den);
 
     // 起動後ずっと一定なので、一度だけ取得してキャッシュ
     static const LONGLONG s_qpcFreq = [] {
@@ -65,7 +65,7 @@ ayc::TimeSpan ayc::NowFromQPC()
             );
         }
     }();
-    return TimeSpan{ticks};
+    return wgc::TimeSpan{ticks};
 }
 
 //-----------------------------------------------------------------------------

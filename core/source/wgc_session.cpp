@@ -23,7 +23,7 @@
 #define CALL_GCS_MEMBER(gcsInstance, memberName, value) \
     { \
         const auto isPresent = TRY_WINRT_RET( \
-            [&]() { return ayc::ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L#memberName); } \
+            [&]() { return wgc::ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L#memberName); } \
         ); \
         if( isPresent ) \
         { \
@@ -101,10 +101,10 @@ namespace
         // コンストラクタ
         _OnFrameArrived
         (
-            const ayc::IDirect3DDevice& wrtDevice,
+            const wgc::IDirect3DDevice& wrtDevice,
             ayc::details::WGCSessionState& state,
             ayc::ExceptionTunnel& exceptionTunnel,
-            const ayc::SizeInt32& initialContentSize,
+            const wgc::SizeInt32& initialContentSize,
             std::optional<std::size_t> maxWidth,
             std::optional<std::size_t> maxHeight
         )
@@ -126,8 +126,8 @@ namespace
 
         // ハンドラ
         void Handler(
-            const ayc::Direct3D11CaptureFramePool& sender,
-            const ayc::WinRTIInspectable& args
+            const wgc::Direct3D11CaptureFramePool& sender,
+            const wgc::WinRTIInspectable& args
         )
         {
             try
@@ -149,7 +149,7 @@ namespace
                     現在到着している中で最新の１フレームだけを使い、それ以外は読み捨てる。
                     フレームバッファをマメにクリーンナップしたいので、フレームが無い場合も処理継続。
                 */
-                const ayc::Direct3D11CaptureFrame frame = [&]()
+                const wgc::Direct3D11CaptureFrame frame = [&]()
                     {
                         auto f_ret = TRY_WINRT_RET((
                             [&]() { return sender.TryGetNextFrame(); }
@@ -187,7 +187,7 @@ namespace
                         {
                             sender.Recreate(
                                 m_wrtDevice,
-                                ayc::DirectXPixelFormat::B8G8R8A8UIntNormalized,
+                                wgc::DirectXPixelFormat::B8G8R8A8UIntNormalized,
                                 WGC_FRAME_POOL_NUM_BUFFERS,
                                 contentSize
                             );
@@ -199,13 +199,13 @@ namespace
                     }
                 }
                 // CaptureFramePool バックバッファの D3D11 テクスチャを取得
-                ayc::com_ptr<ID3D11Texture2D> pCFPTex;
+                wgc::com_ptr<ID3D11Texture2D> pCFPTex;
                 {
                     const auto surface = TRY_WINRT_RET((
                         [&]() { return frame.Surface(); }
                         ));
                     const auto access = TRY_WINRT_RET((
-                        [&]() { return surface.as<ayc::IDirect3DDxgiInterfaceAccess>(); }
+                        [&]() { return surface.as<wgc::IDirect3DDxgiInterfaceAccess>(); }
                         ));
                     const HRESULT result = access->GetInterface(
                         __uuidof(ID3D11Texture2D),
@@ -233,7 +233,7 @@ namespace
                     スケーリング不要ならシンプルにコピー。
                     スケーリングが必要ならシェーダー起動。
                 */
-                ayc::com_ptr<ID3D11Texture2D> pFBTex;
+                wgc::com_ptr<ID3D11Texture2D> pFBTex;
                 if (cfpDesc.Width == optimalWidth && cfpDesc.Height == optimalHeight)
                 {
                     // コピー先を生成
@@ -289,12 +289,12 @@ namespace
 
     private:
         // 親のメンバ変数への参照
-        const ayc::IDirect3DDevice&     m_wrtDevice;
+        const wgc::IDirect3DDevice&     m_wrtDevice;
         ayc::details::WGCSessionState&  m_state;
         ayc::ExceptionTunnel&           m_exceptionTunnel;
 
         // サイズ関係
-        ayc::SizeInt32	            m_latestContentSize;
+        wgc::SizeInt32	            m_latestContentSize;
         std::optional<std::size_t>  m_maxWidth;
         std::optional<std::size_t>  m_maxHeight;
     };
@@ -302,7 +302,7 @@ namespace
     //-----------------------------------------------------------------------------
     // DispatcherQueue シャットダウン関数
     void _ShutdownDispatcherQueueController(
-        ayc::DispatcherQueueController& dqc
+        wgc::DispatcherQueueController& dqc
     )
     {
         /* @note:
@@ -479,7 +479,7 @@ namespace
             // 必要機能が未サポートならエラー
             {
                 const bool isGcsSupported = TRY_WINRT_RET((
-                    [&]() { return ayc::GraphicsCaptureSession::IsSupported(); }
+                    [&]() { return wgc::GraphicsCaptureSession::IsSupported(); }
                 ));
                 if (!isGcsSupported)
                 {
@@ -497,7 +497,7 @@ namespace
                         return CreateDirect3D11DeviceFromDXGIDevice
                         (
                             dxgiDevice.get(),
-                            reinterpret_cast<::IInspectable**>(ayc::put_abi(m_wrtDevice))
+                            reinterpret_cast<wgc::GlobalIInspectable**>(wgc::put_abi(m_wrtDevice))
                         );
                     }
                     ));
@@ -518,7 +518,7 @@ namespace
                     {
                         return CreateDispatcherQueueController(
                             dqo,
-                            reinterpret_cast<PDISPATCHERQUEUECONTROLLER*>(ayc::put_abi(m_dqc))
+                            reinterpret_cast<PDISPATCHERQUEUECONTROLLER*>(wgc::put_abi(m_dqc))
                         );
                     }
                 ));
@@ -528,11 +528,11 @@ namespace
                 }
             }
             // キャプチャアイテム生成
-            ayc::GraphicsCaptureItem captureItem{ nullptr };
+            wgc::GraphicsCaptureItem captureItem{ nullptr };
             {
                 // interop 取得
                 const auto interop = TRY_WINRT_RET((
-                    ([&]() { return ayc::get_activation_factory<ayc::GraphicsCaptureItem, IGraphicsCaptureItemInterop>(); })
+                    ([&]() { return wgc::get_activation_factory<wgc::GraphicsCaptureItem, IGraphicsCaptureItemInterop>(); })
                 ));
                 // 指定のウィンドウに対してアイテムを生成
                 const HRESULT result = TRY_WINRT_RET((
@@ -540,8 +540,8 @@ namespace
                     {
                         return interop->CreateForWindow(
                             param.hwnd,
-                            ayc::guid_of<ayc::GraphicsCaptureItem>(),
-                            ayc::put_abi(captureItem)
+                            wgc::guid_of<wgc::GraphicsCaptureItem>(),
+                            wgc::put_abi(captureItem)
                         );
                     }
                 ));
@@ -578,9 +578,9 @@ namespace
             m_framePool = TRY_WINRT_RET((
                 [&]()
                 {
-                    return ayc::Direct3D11CaptureFramePool::Create(
+                    return wgc::Direct3D11CaptureFramePool::Create(
                         m_wrtDevice,
-                        ayc::DirectXPixelFormat::B8G8R8A8UIntNormalized,
+                        wgc::DirectXPixelFormat::B8G8R8A8UIntNormalized,
                         WGC_FRAME_POOL_NUM_BUFFERS,
                         captureItemSize
                     );
@@ -690,7 +690,7 @@ namespace
         void Run()
         {
             // メッセージループ
-            const ayc::DispatcherQueue dq = TRY_WINRT_RET((
+            const wgc::DispatcherQueue dq = TRY_WINRT_RET((
                 [&]() { return m_dqc.DispatcherQueue(); }
             ));
             MSG msg{};
@@ -755,12 +755,12 @@ namespace
         ayc::ExceptionTunnel            m_exceptionTunnel;
 
         // WinRT オブジェクト
-        ayc::IDirect3DDevice                m_wrtDevice;
-        ayc::DispatcherQueueController      m_dqc;
+        wgc::IDirect3DDevice                m_wrtDevice;
+        wgc::DispatcherQueueController      m_dqc;
         std::unique_ptr<_OnFrameArrived>    m_pOnFrameArrived;
-        ayc::Direct3D11CaptureFramePool     m_framePool;
-        ayc::GraphicsCaptureSession		    m_captureSession;
-        ayc::FrameArrived_revoker	        m_revoker;
+        wgc::Direct3D11CaptureFramePool     m_framePool;
+        wgc::GraphicsCaptureSession		    m_captureSession;
+        wgc::FrameArrived_revoker	        m_revoker;
     };
 
     //-----------------------------------------------------------------------------
@@ -930,7 +930,7 @@ void ayc::WGCSession::Close()
 }
 
 //-----------------------------------------------------------------------------
-ayc::com_ptr<ID3D11Texture2D> ayc::WGCSession::CopyFrame(double relativeInSec)
+wgc::com_ptr<ID3D11Texture2D> ayc::WGCSession::CopyFrame(double relativeInSec)
 {
     _PreCondition();
     return m_state.GetFrameBuffer().GetFrame(relativeInSec);

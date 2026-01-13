@@ -72,12 +72,12 @@ void ayc::FrameBuffer::Clear()
 
 //-----------------------------------------------------------------------------
 void ayc::FrameBuffer::PushFrame(
-	const com_ptr<ID3D11Texture2D>& pTexture,
-	const TimeSpan& timeSpan
+	const wgc::com_ptr<ID3D11Texture2D>& pTexture,
+	const wgc::TimeSpan& timeSpan
 )
 {
 	// 「現在」を確定させる
-	const TimeSpan nowInTS = []() {
+	const wgc::TimeSpan nowInTS = []() {
 		return NowFromQPC();
 	}();
 	// バッファにフレームを追加＆バッファから賞味期限切れのフレームを削除
@@ -105,10 +105,10 @@ void ayc::FrameBuffer::PushFrame(
 }
 
 //-----------------------------------------------------------------------------
-ayc::com_ptr<ID3D11Texture2D> ayc::FrameBuffer::GetFrame(double relativeInSec) const
+wgc::com_ptr<ID3D11Texture2D> ayc::FrameBuffer::GetFrame(double relativeInSec) const
 {
 	// 「現在」を確定させる
-	const TimeSpan nowInTS = []() {
+	const wgc::TimeSpan nowInTS = []() {
 		return NowFromQPC();
 	}();
 	// 相対時刻が最も近いフレームを選択する
@@ -121,7 +121,7 @@ ayc::com_ptr<ID3D11Texture2D> ayc::FrameBuffer::GetFrame(double relativeInSec) c
 		std::scoped_lock<std::mutex> lock(m_guard);
 		if (m_impl.empty())
 		{
-			return ayc::com_ptr<ID3D11Texture2D>(nullptr);
+			return wgc::com_ptr<ID3D11Texture2D>(nullptr);
 		}
 		result = *_FindMinElement(
 			m_impl.cbegin(),
@@ -155,7 +155,7 @@ ayc::FreezedFrameBuffer::FreezedFrameBuffer(
 : m_impl()
 {
 	// 「現在」を確定させる
-	const TimeSpan nowInTS = []()
+	const wgc::TimeSpan nowInTS = []()
 	{
 		return NowFromQPC();
 	}();
@@ -214,7 +214,7 @@ std::size_t ayc::FreezedFrameBuffer::GetFrameIndex(double relativeInSec) const
 }
 
 //-----------------------------------------------------------------------------
-ayc::com_ptr<ID3D11Texture2D> ayc::FreezedFrameBuffer::operator [](std::size_t index) const
+wgc::com_ptr<ID3D11Texture2D> ayc::FreezedFrameBuffer::operator [](std::size_t index) const
 {
 	return m_impl[index].pTexture;
 }

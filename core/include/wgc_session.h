@@ -58,7 +58,7 @@ namespace ayc
 		void Close();
 
 		// 単一フレームのコピーを得る
-		com_ptr<ID3D11Texture2D> CopyFrame(double relativeInSec);
+		wgc::com_ptr<ID3D11Texture2D> CopyFrame(double relativeInSec);
 
 		// バックバッファのコピー（スナップショット）を得る
 		FreezedFrameBuffer CopyFrameBuffer(double durationInSec);

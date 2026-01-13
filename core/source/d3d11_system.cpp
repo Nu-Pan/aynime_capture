@@ -16,8 +16,8 @@
 //-----------------------------------------------------------------------------
 namespace
 {
-	ayc::com_ptr<ID3D11Device> s_d3dDevice;
-    ayc::com_ptr<ID3D11DeviceContext> s_d3dContext;
+    wgc::com_ptr<ID3D11Device> s_d3dDevice;
+    wgc::com_ptr<ID3D11DeviceContext> s_d3dContext;
 }
 
 //-----------------------------------------------------------------------------
@@ -65,7 +65,7 @@ void ayc::d3d11::Initialize()
     }
     // マルチスレッド保護を明示的に有効化
     {
-        ayc::com_ptr<ID3D11Multithread> mt;
+        wgc::com_ptr<ID3D11Multithread> mt;
         const HRESULT hr = s_d3dContext->QueryInterface(
             __uuidof(ID3D11Multithread),
             mt.put_void()
@@ -90,14 +90,14 @@ void ayc::d3d11::Finalize()
 
 //-----------------------------------------------------------------------------
 // D3D11 Device
-const ayc::com_ptr<ID3D11Device>& ayc::d3d11::Device()
+const wgc::com_ptr<ID3D11Device>& ayc::d3d11::Device()
 {
     return s_d3dDevice;
 }
 
 //-----------------------------------------------------------------------------
 // D3D11 Device Context
-const ayc::com_ptr<ID3D11DeviceContext>& ayc::d3d11::Context()
+const wgc::com_ptr<ID3D11DeviceContext>& ayc::d3d11::Context()
 {
     return s_d3dContext;
 }

@@ -14,13 +14,13 @@ namespace ayc
 namespace ayc
 {
     // TimeSpan の差から秒単位の長さを計算
-    inline double toDurationInSec(TimeSpan stop, TimeSpan start)
+    inline double toDurationInSec(wgc::TimeSpan stop, wgc::TimeSpan start)
     {
         return std::chrono::duration<double>(stop - start).count();
     }
 
     // 現在時刻を QPC から得る
-    TimeSpan NowFromQPC();
+    wgc::TimeSpan NowFromQPC();
 
     // wchar --> char
     std::string WideToUtf8(std::wstring_view wide);

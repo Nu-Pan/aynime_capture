@@ -27,8 +27,8 @@ namespace ayc
 		// フレーム１枚を表す構造体
 		struct FRAME
 		{
-			com_ptr<ID3D11Texture2D> pTexture;
-			TimeSpan timeSpan;
+			wgc::com_ptr<ID3D11Texture2D> pTexture;
+			wgc::TimeSpan timeSpan;
 		};
 
 		// 内部コンテナ型
@@ -45,12 +45,12 @@ namespace ayc
 
 		// フレームを１つ追加する
 		void PushFrame(
-			const com_ptr<ID3D11Texture2D>& pTexture,
-			const TimeSpan& timeSpan
+			const wgc::com_ptr<ID3D11Texture2D>& pTexture,
+			const wgc::TimeSpan& timeSpan
 		);
 
 		// 相対時刻指定でフレームを１つ取得する
-		com_ptr<ID3D11Texture2D> GetFrame(double relativeInSec) const;
+		wgc::com_ptr<ID3D11Texture2D> GetFrame(double relativeInSec) const;
 
 
 	private:
@@ -71,7 +71,7 @@ namespace ayc
 		// フレーム１枚を表す構造体
 		struct FRAME
 		{
-			com_ptr<ID3D11Texture2D> pTexture;
+			wgc::com_ptr<ID3D11Texture2D> pTexture;
 			double relativeInSec;
 		};
 
@@ -112,7 +112,7 @@ namespace ayc
 		std::size_t GetFrameIndex(double relativeInSec) const;
 
 		// インテックス指定でフレームを１つ取得する
-		com_ptr<ID3D11Texture2D> operator [](std::size_t index) const;
+		wgc::com_ptr<ID3D11Texture2D> operator [](std::size_t index) const;
 
 	private:
 		Impl	m_impl;

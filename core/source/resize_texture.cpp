@@ -18,7 +18,7 @@
 namespace
 {
     // 頂点シェーダーを生成する
-    ayc::com_ptr<ID3D11VertexShader> _CreateVertexShader()
+    wgc::com_ptr<ID3D11VertexShader> _CreateVertexShader()
     {
         // シェーダーソースコード
         const char hlslSourceCode[] = R"(
@@ -58,8 +58,8 @@ namespace
             }
         )";
         // シェーダーコンパイル
-        ayc::com_ptr<ID3DBlob> pBlob;
-        ayc::com_ptr<ID3DBlob> pErrors;
+        wgc::com_ptr<ID3DBlob> pBlob;
+        wgc::com_ptr<ID3DBlob> pErrors;
         {
             const auto result = D3DCompile(
                 hlslSourceCode,
@@ -80,7 +80,7 @@ namespace
             }
         }
         // シェーダーオブジェクトを生成
-        ayc::com_ptr<ID3D11VertexShader> pVertexShader;
+        wgc::com_ptr<ID3D11VertexShader> pVertexShader;
         {
             const auto result = ayc::d3d11::Device()->CreateVertexShader(
                 pBlob->GetBufferPointer(),
@@ -104,7 +104,7 @@ namespace
     }
 
     // ピクセルシェーダーを生成する
-    ayc::com_ptr<ID3D11PixelShader> _CreatePixelShader()
+    wgc::com_ptr<ID3D11PixelShader> _CreatePixelShader()
     {
         // シェーダーソースコード
         const char hlslSourceCode[] = R"(
@@ -123,8 +123,8 @@ namespace
             }
         )";
         // シェーダーコンパイル
-        ayc::com_ptr<ID3DBlob> pBlob;
-        ayc::com_ptr<ID3DBlob> pErrors;
+        wgc::com_ptr<ID3DBlob> pBlob;
+        wgc::com_ptr<ID3DBlob> pErrors;
         {
             const auto result = D3DCompile(
                 hlslSourceCode,
@@ -145,7 +145,7 @@ namespace
             }
         }
         // シェーダーオブジェクトを生成
-        ayc::com_ptr<ID3D11PixelShader> pPixelShader;
+        wgc::com_ptr<ID3D11PixelShader> pPixelShader;
         {
             const auto result = ayc::d3d11::Device()->CreatePixelShader(
                 pBlob->GetBufferPointer(),
@@ -174,8 +174,8 @@ namespace
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-ayc::com_ptr<ID3D11Texture2D> ayc::ResizeTexture(
-    const ayc::com_ptr<ID3D11Texture2D>& pSrcTex,
+wgc::com_ptr<ID3D11Texture2D> ayc::ResizeTexture(
+    const wgc::com_ptr<ID3D11Texture2D>& pSrcTex,
     UINT destWidth,
     UINT destHeight
 )
@@ -201,7 +201,7 @@ ayc::com_ptr<ID3D11Texture2D> ayc::ResizeTexture(
         destDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
     }
     // コピー先テクスチャを生成
-    ayc::com_ptr<ID3D11Texture2D> pDestTex;
+    wgc::com_ptr<ID3D11Texture2D> pDestTex;
     {
         const auto result = pDevice->CreateTexture2D(
             &destDesc,
@@ -214,7 +214,7 @@ ayc::com_ptr<ID3D11Texture2D> ayc::ResizeTexture(
         }
     }
     // コピー元 SRV を作成
-    ayc::com_ptr<ID3D11ShaderResourceView> pSrcSRV;
+    wgc::com_ptr<ID3D11ShaderResourceView> pSrcSRV;
     {
         // desc
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
@@ -238,7 +238,7 @@ ayc::com_ptr<ID3D11Texture2D> ayc::ResizeTexture(
         }
     }
     // コピー先 RTV を作成
-    ayc::com_ptr<ID3D11RenderTargetView> pDestRTV;
+    wgc::com_ptr<ID3D11RenderTargetView> pDestRTV;
     {
         const auto result = pDevice->CreateRenderTargetView(
             pDestTex.get(), nullptr, pDestRTV.put()
@@ -249,7 +249,7 @@ ayc::com_ptr<ID3D11Texture2D> ayc::ResizeTexture(
         }
     }
     // サンプラーステート
-    ayc::com_ptr<ID3D11SamplerState> pSampler;
+    wgc::com_ptr<ID3D11SamplerState> pSampler;
     {
         // desc
         D3D11_SAMPLER_DESC sampDesc{};
