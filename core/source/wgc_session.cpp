@@ -28,7 +28,7 @@
         ); \
         if( isPresent ) \
         { \
-            TRY_WINRT_NO_THROW( [&]() { gcsInstance.memberName(value); } ); \
+            TRY_WINRT_NOTHROW( [&]() { gcsInstance.memberName(value); } ); \
         } \
     }
 
