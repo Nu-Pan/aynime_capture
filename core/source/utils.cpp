@@ -117,6 +117,30 @@ std::string ayc::WideToUtf8(std::wstring_view wide)
     return out;
 }
 
+//-----------------------------------------------------------------------------
+// ScopedCall
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+ayc::ScopedCall::ScopedCall(
+    std::function<void(void)> initializer,
+    std::function<void(void)> finalizer
+)
+    : m_finalizer()
+{
+    // @note: 初期化に成功してから後始末関数を設定する
+    initializer();
+    m_finalizer = finalizer;
+}
+
+//-----------------------------------------------------------------------------
+ayc::ScopedCall::~ScopedCall()
+{
+    if (m_finalizer)
+    {
+        m_finalizer();
+    }
+}
 
 //-----------------------------------------------------------------------------
 // Windows
@@ -183,7 +207,7 @@ std::string ayc::ComApartmenTypeDiagnosticInfo(const char* const pLabel)
     APTTYPEQUALIFIER aq;
     const HRESULT hr= ::CoGetApartmentType(&at, &aq);
     return std::format(
-        "[ayc] {} tid={}, hr={}, at={}, aq={}",
+        "{} tid={}, hr={}, at={}, aq={}",
         pLabel,
         tid,
         hr,
@@ -191,6 +215,36 @@ std::string ayc::ComApartmenTypeDiagnosticInfo(const char* const pLabel)
         static_cast<int>(aq)
     );
 }
+
+//-----------------------------------------------------------------------------
+DWORD ayc::GetWindowsBuildNumber()
+{
+    // 必要な dll をロード
+    HMODULE ntdll = ::GetModuleHandleW(L"ntdll.dll");
+    if (!ntdll)
+    {
+        return 0;
+    }
+    // 関数をロード
+    using RtlGetVersionFn = LONG(WINAPI*)(PRTL_OSVERSIONINFOW);
+    auto pRtlGetVersion = reinterpret_cast<RtlGetVersionFn>(::GetProcAddress(ntdll, "RtlGetVersion"));
+    if (!pRtlGetVersion)
+    {
+        return 0;
+    }
+    // 問い合わせ
+    RTL_OSVERSIONINFOW vi{};
+    {
+        vi.dwOSVersionInfoSize = sizeof(vi);
+        const LONG result = pRtlGetVersion(&vi);
+        if (result != 0)
+        {
+            return 0;
+        }
+    }
+    return vi.dwBuildNumber;
+}
+
 
 //-----------------------------------------------------------------------------
 // Python

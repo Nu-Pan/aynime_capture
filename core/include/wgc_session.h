@@ -57,6 +57,9 @@ namespace ayc
 		// セッションを停止
 		void Close();
 
+		// OS バージョン的に合法なら true を返す
+		static bool Available();
+
 		// 単一フレームのコピーを得る
 		wgc::com_ptr<ID3D11Texture2D> CopyFrame(double relativeInSec);
 

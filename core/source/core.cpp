@@ -46,6 +46,7 @@ namespace ayc
                 ayc::d3d11::Initialize();
             }
             // セッション開始
+            if( ayc::WGCSession::Available() )
             {
                 m_pWGCSession.reset(
                     new ayc::WGCSession(reinterpret_cast<HWND>(hwnd), holdInSec, maxWidth, maxHeight)

@@ -27,6 +27,29 @@ namespace ayc
 }
 
 //-------------------------------------------------------------------------
+// std
+
+namespace ayc
+{
+    // スコープと紐づいて初期化・後始末を呼び出すクラス
+    class ScopedCall
+    {
+    public:
+        // コンストラクタ
+        ScopedCall(
+            std::function<void(void)> initializer,
+            std::function<void(void)> finalizer
+        );
+
+        // デストラクタ
+        ~ScopedCall();
+
+    private:
+        std::function<void(void)> m_finalizer;
+    };
+}
+
+//-------------------------------------------------------------------------
 // Windows
 //-------------------------------------------------------------------------
 namespace ayc
@@ -34,8 +57,11 @@ namespace ayc
     // HRESULT --> 人間が読める説明文字列
     std::string HresultToString(HRESULT hresultValue);
 
-    // COM のアパアート面と種別診断情報を文字列で取得
+    // COM のアパアートメント種別診断情報を文字列で取得
     std::string ComApartmenTypeDiagnosticInfo(const char* const pLabel);
+
+    // ランタイムの Windows ビルド番号を取得
+    DWORD GetWindowsBuildNumber();
 }
 
 //-------------------------------------------------------------------------
@@ -48,6 +74,11 @@ namespace ayc
 
     // Python の stdout にメッセージを出力する
     void WriteLog(const std::string& message);
+    template<class... Args>
+    inline void WriteLog(std::format_string<Args...> fmt, Args&&... args)
+    {
+        WriteLog(std::format(fmt, std::forward<Args>(args)...));
+    }
 }
 
 //-------------------------------------------------------------------------
@@ -325,11 +356,9 @@ namespace ayc
 #define WRITE_LOG_GENERAL_ERROR(msg, e) \
     { \
         ayc::WriteLog( \
-            std::format( \
-                "{}\n{}", \
-                msg, \
-                e.ToString().c_str() \
-            ) \
+            "{}\n{}", \
+            msg, \
+            e.ToString().c_str() \
         ); \
     }
 
@@ -337,14 +366,12 @@ namespace ayc
 #define WRITE_LOG_CPP_EXCEPTION(msg, e) \
     { \
         ayc::WriteLog( \
-            std::format( \
-                "{}\n{}", \
-                msg, \
-                MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION( \
-                    "from C++ Exception in WRITE_LOG_CPP_EXCEPTION", \
-                    e \
-                ).ToString().c_str() \
-            ) \
+            "{}\n{}", \
+            msg, \
+            MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION( \
+                "from C++ Exception in WRITE_LOG_CPP_EXCEPTION", \
+                e \
+            ).ToString().c_str() \
         ); \
     }
 
@@ -352,14 +379,12 @@ namespace ayc
 #define WRITE_LOG_WINRT_EXCEPTION(msg, e) \
     { \
         ayc::WriteLog( \
-            std::format( \
-                "{}\n{}", \
-                msg, \
-                MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION( \
-                    "from C++ Exception in WRITE_LOG_WINRT_EXCEPTION", \
-                    e \
-                ).ToString().c_str() \
-            ) \
+            "{}\n{}", \
+            msg, \
+            MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION( \
+                "from C++ Exception in WRITE_LOG_WINRT_EXCEPTION", \
+                e \
+            ).ToString().c_str() \
         ); \
     }
 
@@ -374,6 +399,20 @@ namespace ayc
         catch(const winrt::hresult_error& e) \
         { \
             throw MAKE_GENERAL_ERROR_FROM_WINRT_EXCEPTION(#winrtLambda, e); \
+        } \
+    }
+
+// WinRT 呼び出し用ユーティリティ
+// @note: winrtLambda 内で発生した WinRT 例外が GeneralError に変換・その場でテキストダンプされる
+#define TRY_WINRT_NOTHROW(winrtLambda) \
+    { \
+        try \
+        { \
+            winrtLambda(); \
+        } \
+        catch(const winrt::hresult_error& e) \
+        { \
+            WRITE_LOG_WINRT_EXCEPTION(#winrtLambda, e); \
         } \
     }
 
@@ -394,17 +433,20 @@ namespace ayc
 
 // WinRT 呼び出し用ユーティリティ
 // @note: winrtLambda 内で発生した WinRT 例外が GeneralError に変換・その場でテキストダンプされる
-#define TRY_WINRT_NOTHROW(winrtLambda) \
+#define TRY_WINRT_RET_NOTHROW(winrtLambda, defaultValue) \
+    [&]() \
     { \
         try \
         { \
-            winrtLambda(); \
+            return winrtLambda(); \
         } \
         catch(const winrt::hresult_error& e) \
         { \
             WRITE_LOG_WINRT_EXCEPTION(#winrtLambda, e); \
+            return defaultValue; \
         } \
-    }
+    }();
+
 
 //-------------------------------------------------------------------------
 // ExceptionTunnel

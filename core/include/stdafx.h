@@ -49,8 +49,6 @@ namespace wgc
 {
 	// WinRT
 	using winrt::com_ptr;
-	using winrt::impl::com_ref;
-	using winrt::agile_ref;
 	using winrt::guid_of;
 	using winrt::put_abi;
 	using winrt::get_activation_factory;
@@ -62,6 +60,7 @@ namespace wgc
 	// WinRT System
 	using winrt::Windows::System::DispatcherQueue;
 	using winrt::Windows::System::DispatcherQueueController;
+	using CreateDispatcherQueueControllerFunc = HRESULT(WINAPI*)(DispatcherQueueOptions, PDISPATCHERQUEUECONTROLLER*);
 
 	// WinRT Foundation IInspectable
 	/* @note:

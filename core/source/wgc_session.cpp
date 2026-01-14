@@ -22,8 +22,9 @@
 // GraphicsCaptureSession のメンバ呼び出しを簡略化するユーティリティ
 #define CALL_GCS_MEMBER(gcsInstance, memberName, value) \
     { \
-        const auto isPresent = TRY_WINRT_RET( \
-            [&]() { return wgc::ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L#memberName); } \
+        const auto isPresent = TRY_WINRT_RET_NOTHROW( \
+            ([&]() { return wgc::ApiInformation::IsPropertyPresent(L"Windows.Graphics.Capture.GraphicsCaptureSession", L#memberName); }), \
+            false \
         ); \
         if( isPresent ) \
         { \
@@ -47,6 +48,28 @@ namespace
 
 namespace
 {
+    //-----------------------------------------------------------------------------
+    // CreateDispatcherQueueController を動的ロード・呼び出しする
+    wgc::CreateDispatcherQueueControllerFunc _GetCreateDispatcherQueueController()
+    {
+        try
+        {
+            // dll をロード
+            static const auto s_coremsg = ::LoadLibraryW(L"CoreMessaging.dll");
+            if (!s_coremsg)
+            {
+                return nullptr;
+            }
+            // 関数をロード
+            static const auto pCreateDispatcherQueueController = ::GetProcAddress(s_coremsg, "CreateDispatcherQueueController");
+            return reinterpret_cast<wgc::CreateDispatcherQueueControllerFunc>(pCreateDispatcherQueueController);
+        }
+        catch (...)
+        {
+            return nullptr;
+        }
+    }
+
     //-----------------------------------------------------------------------------
     // 最適なフレームサイズを計算する
     std::tuple<long, long> _ResolveOptimalFrameSize
@@ -476,16 +499,6 @@ namespace
                     ayc::ComApartmenTypeDiagnosticInfo("ayc::_WinRTClosureConcrete::_WinRTClosureConcrete")
                 );
             }
-            // 必要機能が未サポートならエラー
-            {
-                const bool isGcsSupported = TRY_WINRT_RET((
-                    [&]() { return wgc::GraphicsCaptureSession::IsSupported(); }
-                ));
-                if (!isGcsSupported)
-                {
-                    throw MAKE_GENERAL_ERROR("GraphicsCaptureSession is not Supported.");
-                }
-            }
             // WinRT D3D11 Device
             {
                 const auto dxgiDevice = TRY_WINRT_RET((
@@ -516,7 +529,12 @@ namespace
                 const HRESULT result = TRY_WINRT_RET((
                     [&]()
                     {
-                        return CreateDispatcherQueueController(
+                        const auto pCreateDispatcherQueueController = _GetCreateDispatcherQueueController();
+                        if (!pCreateDispatcherQueueController)
+                        {
+                            throw MAKE_GENERAL_ERROR("Failed to load CreateDispatcherQueueController");
+                        }
+                        return pCreateDispatcherQueueController(
                             dqo,
                             reinterpret_cast<PDISPATCHERQUEUECONTROLLER*>(wgc::put_abi(m_dqc))
                         );
@@ -927,6 +945,118 @@ void ayc::WGCSession::Close()
     {
         m_isClosed = true;
     }
+}
+
+//-----------------------------------------------------------------------------
+namespace
+{
+    bool _Available()
+    {
+        // 別スレッドでチェック処理を実行
+        bool available = true;
+        try
+        {
+            std::thread checkingThread(
+                [&]()
+                {
+                    // WinRT 初期化
+                    ayc::ScopedCall scopedInit(
+                        [&]() {
+                            TRY_WINRT_NOTHROW((
+                                [&]()
+                                {
+                                    winrt::init_apartment(winrt::apartment_type::single_threaded);
+                                }
+                                ));
+                        },
+                        [&]() {
+                            TRY_WINRT_NOTHROW((
+                                [&]()
+                                {
+                                    winrt::clear_factory_cache();
+                                    winrt::uninit_apartment();
+                                }
+                                ));
+                        }
+                    );
+                    // Windows OS Build
+                    {
+                        const DWORD build = ayc::GetWindowsBuildNumber();
+                        static const DWORD requiredWindowsBuildNumber = 18362;  // Win10 1903
+                        const bool staisfied = build >= requiredWindowsBuildNumber;
+                        ayc::WriteLog(
+                            "Windows OS Build Number: {} ({})",
+                            staisfied,
+                            build
+                        );
+                        if (!staisfied)
+                        {
+                            available = false;
+                        }
+                    }
+                    // CreateDispatcherQueueController
+                    {
+                        const auto result = ::_GetCreateDispatcherQueueController();
+                        ayc::WriteLog("CreateDispatcherQueueController: {}", result != nullptr);
+                        if (!result)
+                        {
+                            available = false;
+                        }
+                    }
+                    // UniversalApiContract
+                    {
+                        const bool result = TRY_WINRT_RET_NOTHROW(
+                            ([&]() { return wgc::ApiInformation::IsApiContractPresent(L"Windows.Foundation.UniversalApiContract", 8); }),
+                            false
+                        );
+                        ayc::WriteLog("UniversalApiContract v8: {}", result);
+                        if (!result)
+                        {
+                            available = false;
+                        }
+                    }
+                    // IGraphicsCaptureItemInterop
+                    {
+                        const auto result = TRY_WINRT_RET_NOTHROW(
+                            ([&]() { return winrt::get_activation_factory<wgc::GraphicsCaptureItem, IGraphicsCaptureItemInterop>(); }),
+                            (wgc::com_ptr<IGraphicsCaptureItemInterop>{})
+                        );
+                        ayc::WriteLog("IGraphicsCaptureItemInterop: {}", result != nullptr);
+                        if (!result)
+                        {
+                            available = false;
+                        }
+                    }
+                    // GraphicsCaptureSession::IsSupported
+                    {
+                        const auto result = TRY_WINRT_RET_NOTHROW(
+                            ([&]() { return wgc::GraphicsCaptureSession::IsSupported(); }),
+                            false
+                        );
+                        ayc::WriteLog("GraphicsCaptureSession::IsSupported: {}", result);
+                        if (!result)
+                        {
+                            available = false;
+                        }
+                    }
+                }
+            );
+            checkingThread.join();
+        }
+        catch (const std::exception& e)
+        {
+            throw MAKE_GENERAL_ERROR_FROM_CPP_EXCEPTION("Failed to create thread'", e);
+        }
+        ayc::WriteLog("WGCSession::Available: {}", available);
+        return available;
+    }
+}
+
+//-----------------------------------------------------------------------------
+/*static*/ bool ayc::WGCSession::Available()
+{
+    static bool s_available = _Available();
+    return s_available;
 }
 
 //-----------------------------------------------------------------------------
